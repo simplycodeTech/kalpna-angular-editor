@@ -1,0 +1,88 @@
+#editor {
+  max-height: 700px;
+   min-height: 700px;
+  border: 1px solid #ccc;
+  padding: 10px;
+  font-family: sans-serif;
+  overflow-y: scroll;
+}
+
+.toolbar {
+  margin-bottom: 10px;
+}
+
+button {
+  margin-right: 5px;
+}
+
+
+#editor.active {
+  background: #E7EDFA;
+}
+
+
+.form-container {
+    padding:5px 0;
+    margin-bottom:10px;
+    width:max-content;
+}
+
+  .form-container input, .form-container button {
+    border-radius: 0px;
+    font-size: 0.9rem;
+    margin: 0px;
+  }
+  .toolbar  .btn.btn-text {
+     padding:9px 10px;
+  } 
+  .toolbar  .btn {
+    white-space:nowrap !important;
+    padding:9px 15px;
+    border-radius: 0px;
+    font-size: 0.9rem;
+    margin: 3px;
+}
+
+
+.toolbar .btn i {
+    font-size: 1.3rem;
+    color: #000;
+}
+
+
+.toolbar .selection {
+    padding: 5px 0px 5px 0px;
+    line-height: normal;
+    height: 43px;
+    margin: 3px;
+    border-radius: 0px;
+}
+
+
+
+.toolbar-popup {
+  position: absolute;
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 6px;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  z-index: 1000;
+
+}
+
+  .toolbar-popup button {
+    background: transparent;
+    border: none;
+    margin: 0 4px;
+    cursor: pointer;
+    font-size: 1.3rem;
+  }
+
+    .toolbar-popup button.btn-text {
+      padding:9px 15px;
+    }
+
+    .toolbar-popup button:hover {
+      background:var(--border);
+    }

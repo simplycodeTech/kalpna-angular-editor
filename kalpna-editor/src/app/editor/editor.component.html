@@ -1,0 +1,69 @@
+
+<div class="toolbar d-md-flex">
+  <button title="Upload Image" class="btn  btn-outline-secondary" (click)="insertImage()"><i class="bi bi-image"></i></button>
+  <!--<button class="btn btn-outline-secondary" (click)="insertTable()"><i class="bi bi-table"></i></button>-->
+  <button title="Insert Table" class="btn btn-outline-secondary" (click)="toggleForm()"><i class="bi bi-table"></i></button>
+  <button title="Insert Paragraph" class="btn btn-outline-secondary" (click)="insertText('Sample Text')"><i class="bi bi-paragraph"></i></button>
+
+  <div class="dropdown d-inline">
+    <button title="Insert Heading" class="btn btn-text btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+     H1
+    </button>
+    <ul class="dropdown-menu">
+      <li><a class="dropdown-item" (click)="insertHeading('h1')">H1</a></li>
+      <li><a class="dropdown-item" (click)="insertHeading('h2')">H2</a></li>
+      <li><a class="dropdown-item" (click)="insertHeading('h3')">H3</a></li>
+      <li><a class="dropdown-item" (click)="insertHeading('h4')">H4</a></li>
+      <li><a class="dropdown-item" (click)="insertHeading('h5')">H5</a></li>
+      <li><a class="dropdown-item" (click)="insertHeading('h6')">H6</a></li>
+    </ul>
+  </div>
+
+    <button title="Create Link" class="btn btn-outline-secondary"   (click)="format('createLink')"><i class="bi bi-link-45deg"></i></button>
+  <button title="Remove link"  class="btn btn-outline-secondary"  (click)="format('unlink')" [ngClass]="{ 'd-none': !isLinkSelected }"><i class="bi bi-x"></i></button>
+
+<button title="Insert Unordered List" class="btn btn-outline-secondary" (click)="insertUnorderedList()">
+  <i class="bi bi-list-ul"></i>
+</button>
+
+<button title="Insert Ordered List" class="btn btn-outline-secondary" (click)="insertOrderedList()">
+  <i class="bi bi-list-ol"></i>
+</button>
+
+<select  class="selection"  [(ngModel)]="selectedFontSize" (change)="applyFontSize(selectedFontSize)">
+    <option *ngFor="let size of fontSizes" [value]="size">
+    {{ size === 'Remove Size' ? 'Default Size' : size }}
+    </option>
+</select>
+
+
+  <button title="View Source Code" class="btn btn-text" [ngClass]="isSourceView ? 'btn-dark' : 'btn-primary'" (click)="toggleSourceCode()">{{ isSourceView ? 'Visual' : 'Source Code' }}</button>
+</div>
+
+<div *ngIf="showForm" class="form-container mt-2">
+  <input type="number" [(ngModel)]="rows" placeholder="Row count" min="1" class="form-control d-inline w-auto me-2">
+  <input type="number" [(ngModel)]="cols" placeholder="Column count" min="1" class="form-control d-inline w-auto me-2">
+  <button class="btn btn-primary" (click)="insertTable()">Create Table</button>
+</div>
+
+<div class="toolbar-popup"
+     *ngIf="showToolbar"
+     [ngStyle]="{ top: position.top + 'px', left: position.left + 'px' }">
+  <button title="bold" (click)="format('bold')"><i class="bi bi-type-bold"></i></button>
+  <button title="italic" (click)="format('italic')"><i class="bi bi-type-italic"></i></button>
+  <button title="Create Link" (click)="format('createLink')"><i class="bi bi-link-45deg"></i></button>
+  <button title="Remove link" (click)="format('unlink')" [ngClass]="{ 'd-none': !isLinkSelected }"><i class="bi bi-x"></i></button>
+  <button title="Left Align" (click)="format('justifyLeft')"><i class="bi bi-text-left"></i></button>
+  <button title="Center Align" (click)="format('justifyCenter')"><i class="bi bi-text-center"></i></button>
+  <button title="Right" (click)="format('justifyRight')"><i class="bi bi-text-right"></i></button>
+  <select class="" [(ngModel)]="selectedFontSize" (change)="applyFontSize(selectedFontSize)">
+  <option *ngFor="let size of fontSizes" [value]="size">
+  {{ size === 'Remove Size' ? 'Default Size' : size }}
+</option>
+</select>
+
+</div>
+
+
+<div #editor id="editor" contenteditable="true"  [ngClass]="{ 'active': isSourceView }" (mouseup)="checkLinkSelection()" (keyup)="checkLinkSelection()"
+     (blur)="checkLinkSelection()" (mouseup)="onTextSelect($event)"  (mouseover)="onTextSelect($event)"></div>
