@@ -1,34 +1,33 @@
-@font-face {
-  font-family: 'SakalMarathi';
-  src: url('/assets/fonts/SakalMarathi.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
 
 
 
-
-#editor {
-   min-height: max-content;
-  background: white;
-  line-height: 1.6;
-  box-sizing: border-box;
-  overflow: visible !important;
-  margin: 0 auto;
-  min-height: 600px;
-  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-  font-size: 14px; 
-  line-height: 1.6; 
-  padding: 20px;
-}
 
 .editorW {
-  width: 650px; /* A4 in pixels @ 96dpi */
-  min-height: 600px;
-  border: 1px solid #ddd;
-
-
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  background: #ffffff;
 }
+
+/* Default visual mode look */
+#editor {
+  min-height: 400px;
+  padding: 16px;
+  font-family: 'Noto Sans', 'Segoe UI', sans-serif;
+  font-size: 14px;
+  color: #000;
+  background: #fff;
+}
+
+/* Active class = SourceView Style (Monaco-like) */
+#editor.active {
+  background-color: #E7EDFA;
+  color: #1e1e1e;
+ font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 14px;
+  outline: none;
+}
+
+
 
 
 table, h1, h2, h3, p, * {
@@ -54,6 +53,10 @@ time, mark, audio, video {
 }
 
 
+u {
+  text-decoration: underline;
+}
+
 
 .toolbar {
   margin-bottom: 10px;
@@ -64,10 +67,11 @@ button {
   margin-right: 5px;
 }
 
-
-#editor.active {
-  background: #E7EDFA;
+img, table, h1, h2, p {
+  margin-bottom: 8px;
 }
+
+
 
 
 .form-container {
@@ -141,10 +145,32 @@ display: flex;
       margin-top: 20px;
     }
 
-    .icon{
+    .icon, #editor .icon{
   height: 20px;
   width: auto;
 }
+
+#editor a {
+  color: blue;
+  cursor: pointer;
+}
+
+#editor img:focus {
+  outline: 2px solid #3f51b5;
+}
+#editor img {
+  border: 1px dashed #aaa;
+  resize: both;
+  overflow: auto;
+}
+div[contenteditable="false"]:hover {
+  border: 1px dashed #ccc; /* Show only on hover */
+}
+
+#editor a:hover {
+  text-decoration: underline;
+}
+
 
 .color-wrapper {
   position: relative;

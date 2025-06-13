@@ -43,7 +43,8 @@
               "src/styles.css"
               ],
               "scripts": [
-              "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
+              "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js",
+               "src/assets/font/SakalMarathi-normal.js"
               ]
           },
           "configurations": {

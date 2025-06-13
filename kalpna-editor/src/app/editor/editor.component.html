@@ -24,6 +24,8 @@
     <button title="Create Link" class="btn btn-outline-secondary"   (click)="format('createLink')"><i class="bi bi-link-45deg"></i></button>
   <button title="Remove link"  class="btn btn-outline-secondary"  (click)="format('unlink')" [ngClass]="{ 'd-none': !isLinkSelected }"><i class="bi bi-x"></i></button>
 
+
+
 <button title="Insert Unordered List" class="btn btn-outline-secondary" (click)="insertUnorderedList()">
   <i class="bi bi-list-ul"></i>
 </button>
@@ -39,11 +41,10 @@
 </select>
 <button class="btn btn-outline-secondary" (click)="undo()"><img src="../../assets/images/icon/undo.png" class="icon" /></button>
 <button class="btn btn-outline-secondary" (click)="redo()"><img src="../../assets/images/icon/redo.png" class="icon" /></button>
-
+<button title="Upload PDF" class="btn btn-outline-secondary" (click)="insertPDF()">
+  <img src="../../assets/images/icon/pdf.png" class="icon" />
+</button>
   <button title="View Source Code" class="btn btn-text" [ngClass]="isSourceView ? 'btn-dark' : 'btn-primary'" (click)="toggleSourceCode()">{{ isSourceView ? 'Visual' : 'Source Code' }}</button>
-
-
-
 </div>
 
 <div *ngIf="showForm" class="form-container mt-2">
@@ -53,6 +54,7 @@
 </div>
 
 <div class="toolbar-popup"
+ [ngClass]="isSourceView ? 'd-none' : 'toolbar-popup'"
      *ngIf="showToolbar"
      [ngStyle]="{ top: position.top + 'px', left: position.left + 'px' }">
   <button title="bold" (click)="format('bold')"><i class="bi bi-type-bold"></i></button>
@@ -68,7 +70,7 @@
   <div class="lineHeights">
 <div class="dropdown-wrapper" (mouseleave)="showLineHeight = false">
   <button  title="Line Height" (click)="showLineHeight = !showLineHeight">
-   <img src="../../assets/images/icon/Lineheight.png" class="icon" />
+   <img src="../../assets/images/icon/Lineheight.png" class="icon"  />
   </button>
 
   <ul class="dropdown" *ngIf="showLineHeight">
@@ -83,7 +85,18 @@
   <button title="Center Align" (click)="format('justifyCenter')"><i class="bi bi-text-center"></i></button>
   <button title="Right" (click)="format('justifyRight')"><i class="bi bi-text-right"></i></button>
 
-
+<button title="underline" (click)="applyTextDecoration('underline')">
+  <u>U</u>
+</button>
+<button title="line-through" (click)="applyTextDecoration('line-through')">
+  <s>S</s>
+</button>
+<button title="overline" (click)="applyTextDecoration('overline')">
+  <span style="text-decoration: overline;">O</span>
+</button>
+<button title="underline double" (click)="applyTextDecoration('underline double')">
+  <span style="text-decoration: underline double;">𝑈̲</span>
+</button>
 
 <div class="color-wrapper">
   <button title="Text Color"  class="color-btn" (click)="openColorPicker('text')"><img src="../../assets/images/icon/text-color.png" class="icon" /></button>
@@ -115,7 +128,7 @@
   <option value="3">3</option>
 </select> -->
 
-<div class="editorW p-3">
+<div class="editorW">
 <div
   #editor
   id="editor"
@@ -125,9 +138,9 @@
   (keyup)="handleEditorEvents($event)"
   (blur)="handleEditorEvents($event)"
   (mouseover)="handleEditorEvents($event)"
-  (input)="saveState()">
+  (input)="saveState()"
+  >
 </div>
 </div>
-
 
 </div>

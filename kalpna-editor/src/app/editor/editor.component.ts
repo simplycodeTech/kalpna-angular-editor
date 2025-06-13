@@ -2,6 +2,9 @@ import { Component, ViewChild, ElementRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { html as beautifyHtml } from 'js-beautify';
 
+
+declare let window: any; 
+
 @Component({
   selector: 'app-editor',
   standalone: false,
@@ -37,7 +40,7 @@ export class EditorComponent {
   this.onTextSelect(event);
   }
 
-  private insertBlockAtCursor(node: HTMLElement) {
+ private insertBlockAtCursor(node: HTMLElement) {
   this.restoreSelection();
 
   const selection = window.getSelection();
@@ -54,15 +57,14 @@ export class EditorComponent {
     return;
   }
 
+  // Insert the node at cursor position
   range.deleteContents();
   range.insertNode(node);
 
-  const br = document.createElement('br');
-  node.after(br);
-
+  // ✅ Move caret/cursor just after inserted node (NO <br>, NO &nbsp;)
   const newRange = document.createRange();
-  newRange.setStartAfter(br);
-  newRange.setEndAfter(br);
+  newRange.setStartAfter(node);
+  newRange.setEndAfter(node);
   selection.removeAllRanges();
   selection.addRange(newRange);
 
@@ -207,7 +209,7 @@ restoreSelection() {
     }
   }
 
-  insertImage() {
+insertImage() {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
@@ -218,18 +220,72 @@ restoreSelection() {
       const formData = new FormData();
       formData.append('image', file);
 
-      this.http.post<{ path: string }>('http://localhost:3000/upload', formData)
+      this.http.post<{ path: string }>('http://localhost:3000/upload/image', formData)
         .subscribe(res => {
           const img = document.createElement('img');
-          img.src = res.path;
-          img.style.maxWidth = '100%';
-          this.insertBlockAtCursor(img);
+          img.src = `http://localhost:3000${res.path}`;
+          img.style.width = '100%';
+          img.style.height = 'auto';
+          img.style.display = 'block';
+
+          // 🧊 Invisible resizable wrapper
+          const wrapper = document.createElement('div');
+          wrapper.contentEditable = 'false'; // prevent editing inside
+          wrapper.style.display = 'inline-block';
+          wrapper.style.resize = 'both';
+          wrapper.style.overflow = 'auto';
+          wrapper.style.maxWidth = '100%';
+          wrapper.style.border = '1px dashed transparent'; // invisible look
+
+          wrapper.appendChild(img);
+
+          // 🪄 Insert and auto-select
+          this.insertBlockAtCursor(wrapper);
+          setTimeout(() => {
+            const range = document.createRange();
+            range.selectNode(wrapper);
+            const selection = window.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+          }, 0);
         });
     }
   };
 
   input.click();
 }
+
+applyTextDecoration(decoration: string) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+  const selectedText = selection.toString().trim();
+  if (!selectedText) return;
+
+  const parent = range.startContainer.parentElement;
+  const alreadyApplied = parent && parent.style.textDecoration === decoration;
+
+  if (alreadyApplied) {
+    parent.style.textDecoration = '';
+    return;
+  }
+
+  const span = document.createElement('span');
+  span.textContent = selectedText;
+  span.style.textDecoration = decoration;
+
+  range.deleteContents();
+  range.insertNode(span);
+
+  const newRange = document.createRange();
+  newRange.selectNodeContents(span);
+  selection.removeAllRanges();
+  selection.addRange(newRange);
+}
+
+
+
 
 toggleForm() {
   this.showForm = !this.showForm;
@@ -314,6 +370,10 @@ insertTable() {
   this.cols = undefined;
 }
 
+private cleanWhiteSpaceSpans(html: string): string {
+  return html.replace(/<span style="white-space:\s*pre">\s*<\/span>/gi, '');
+}
+
 toggleSourceCode() {
   this.isSourceView = !this.isSourceView;
   const editor = this.editorRef.nativeElement;
@@ -325,10 +385,45 @@ toggleSourceCode() {
       wrap_line_length: 80,
       preserve_newlines: true
     });
-    editor.innerText = formatted;
+
+    // ✅ Clean junk spans
+    const cleaned = this.cleanWhiteSpaceSpans(formatted);
+    editor.innerText = cleaned;
+
   } else {
     editor.innerHTML = editor.innerText;
   }
 }
+insertPDF() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/pdf';
+
+  input.onchange = () => {
+    const file = input.files?.[0];
+    if (file) {
+      const formData = new FormData();
+      formData.append('pdf', file);
+
+      this.http.post<{ filePath: string }>('http://localhost:3000/upload/pdf', formData)
+        .subscribe(res => {
+          const pdfUrl = `http://localhost:3000${res.filePath}`;
+          const fileName = file.name; // e.g., Resume.pdf
+
+          const linkHTML = `<a href="${pdfUrl}" target="_blank">${fileName}</a>`;
+
+          // ✨ Use execCommand to insert pure HTML (no wrappers)
+          this.restoreSelection();
+          document.execCommand('insertHTML', false, linkHTML);
+        });
+    }
+  };
+
+  input.click();
+}
+
+
+
+
 
 }
