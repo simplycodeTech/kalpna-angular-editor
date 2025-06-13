@@ -12,149 +12,240 @@ export class EditorComponent {
   isSourceView: boolean = false;
   showToolbar = false;
   position = { top: 0, left: 0 };
-
-
-  @ViewChild('editor', { static: true }) editorRef!: ElementRef<HTMLDivElement>;
-  constructor(private http: HttpClient) { }
-
-  /* ---- Image Function Start */
-  insertImage() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-
-    input.onchange = () => {
-      const file = input.files?.[0];
-      if (file) {
-        const formData = new FormData();
-        formData.append('image', file);
-
-        this.http.post<{ path: string }>('http://localhost:3000/upload', formData)
-          .subscribe(res => {
-            const img = document.createElement('img');
-            img.src = res.path; // e.g., http://localhost:3000/images/filename.jpg
-            img.style.maxWidth = 'fit-content';
-            this.insertNode(img);
-          });
-      }
-    };
-
-    input.click();
-  }
-
-
-  /* ---- Image Function End */
-
-  /* ---- Source Function Start */
-
- toggleSourceCode() {
-  this.isSourceView = !this.isSourceView;
-  const editor = this.editorRef.nativeElement;
-
-  if (this.isSourceView) {
-    const content = editor.innerHTML;
-    const formatted = beautifyHtml(content, {
-      indent_size: 2,
-      wrap_line_length: 80,
-      preserve_newlines: true
-    });
-    editor.innerText = formatted;
-  } else {
-    editor.innerHTML = editor.innerText;
-  }
-}
-
-  /* ---- Source Function End */
-
-  /* ---- Table Function Start */
-
+  savedRange: Range | null = null;
+  undoStack: string[] = [];
+  redoStack: string[] = [];
+  selectedFontSize: string = 'Default';
+  showLineHeight = false;
+  isLinkSelected = false;
+  lineHeights: string[] = ['1', '1.5', '2', '2.5', '3'];
+  fontSizes: string[] = ['8px', '10px', '12px', '14px', '16px', '18px', '20px', '22px', '24px','28px','30px', '32px',  '36px', '48px', '72px', 'Default'];
   showForm = false;
   rows?: number;
   cols?: number;
 
-  toggleForm() {
-    this.showForm = !this.showForm;
+  @ViewChild('editor', { static: true }) editorRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('textColorInput') textColorInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('bgColorInput') bgColorInput!: ElementRef<HTMLInputElement>;
+
+  constructor(private http: HttpClient) { }
+
+  handleEditorEvents(event: any) {
+   this.saveSelection();
+  this.detectFontSize();
+  this.checkLinkSelection();
+  this.onTextSelect(event);
   }
 
-  insertTable() {
-    if (!this.rows || !this.cols || this.rows < 1 || this.cols < 1) {
-      alert('Please enter valid number of rows and columns');
+  private insertBlockAtCursor(node: HTMLElement) {
+  this.restoreSelection();
+
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    this.editorRef.nativeElement.appendChild(node);
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+  const editor = this.editorRef.nativeElement;
+
+  if (!editor.contains(range.commonAncestorContainer)) {
+    editor.appendChild(node);
+    return;
+  }
+
+  range.deleteContents();
+  range.insertNode(node);
+
+  const br = document.createElement('br');
+  node.after(br);
+
+  const newRange = document.createRange();
+  newRange.setStartAfter(br);
+  newRange.setEndAfter(br);
+  selection.removeAllRanges();
+  selection.addRange(newRange);
+
+  this.savedRange = newRange;
+  editor.focus();
+}
+
+  detectFontSize() {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      this.selectedFontSize = 'Default';
+      return;
+    }
+    const range = selection.getRangeAt(0);
+    const parent = range.startContainer.parentElement;
+    if (parent && parent.style.fontSize) {
+      this.selectedFontSize = parent.style.fontSize;
+    } else {
+      this.selectedFontSize = 'Default';
+    }
+  }
+
+  saveSelection() {
+  const selection = window.getSelection();
+  if (selection && selection.rangeCount > 0) {
+    this.savedRange = selection.getRangeAt(0).cloneRange();
+  }
+}
+
+
+restoreSelection() {
+  const selection = window.getSelection();
+  if (this.savedRange && selection) {
+    selection.removeAllRanges();
+    selection.addRange(this.savedRange);
+  }
+}
+
+  applyStyle(styleType: keyof CSSStyleDeclaration, value: string) {
+    if (!this.savedRange || this.savedRange.collapsed) return;
+    const selectionText = this.savedRange.toString().trim();
+    if (!selectionText) return;
+
+    const selection = window.getSelection();
+    const range = this.savedRange;
+    const parent = range.startContainer.parentElement;
+
+    if (parent?.tagName === 'SPAN') {
+      (parent.style as any)[styleType] = value;
       return;
     }
 
-    let tableHTML = `<table class="table table-bordered table-striped">`;
+    const span = document.createElement('span');
+    (span.style as any)[styleType] = value;
+    span.textContent = selectionText;
 
-    // Add thead with first row as header
-    tableHTML += '<thead><tr>';
-    for (let j = 0; j < this.cols; j++) {
-      tableHTML += `<th>Header ${j + 1}</th>`;
-    }
-    tableHTML += '</tr></thead>';
+    range.deleteContents();
+    range.insertNode(span);
 
-    // Add tbody for rest of the rows
-    tableHTML += '<tbody>';
-    for (let i = 1; i < this.rows; i++) {  // start from 1 because 0th row is header
-      tableHTML += '<tr>';
-      for (let j = 0; j < this.cols; j++) {
-        tableHTML += `<td>Row ${i + 1} Col ${j + 1}</td>`;
-      }
-      tableHTML += '</tr>';
-    }
-    tableHTML += '</tbody>';
-
-    tableHTML += '</table>';
-
-    // Insert directly as HTML – this will apply styles immediately
-    this.editorRef.nativeElement.innerHTML += tableHTML;
-
-    this.showForm = false;
-
-    // Reset form values
-    this.rows = undefined;
-    this.cols = undefined;
+    const newRange = document.createRange();
+    newRange.selectNodeContents(span);
+    selection?.removeAllRanges();
+    selection?.addRange(newRange);
+    this.savedRange = newRange;
   }
 
+  applyFontSize(size: string) {
+    this.applyStyle('fontSize', size === 'Default' ? '' : size);
+    this.selectedFontSize = size;
+  }
 
+  applyLineHeightValue(value: string) {
+    this.showLineHeight = false;
+    this.applyStyle('lineHeight', value);
+  }
 
+  applyColorLive(styleType: 'color' | 'backgroundColor', event: Event) {
+    const input = event.target as HTMLInputElement;
+    const value = input.value;
+    this.applyStyle(styleType, value);
+  }
 
+  openColorPicker(type: 'text' | 'bg') {
+    if (type === 'text') {
+      this.textColorInput.nativeElement.click();
+    } else if (type === 'bg') {
+      this.bgColorInput.nativeElement.click();
+    }
+  }
 
-  /* ---- Table Function End */
-
-
-  /* ---- Text Function Start */
-
+  checkLinkSelection() {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const parent = range.startContainer.parentElement;
+      this.isLinkSelected = !!(parent && parent.closest('a'));
+    } else {
+      this.isLinkSelected = false;
+    }
+  }
 
   onTextSelect(event: MouseEvent) {
     const selection = window.getSelection();
-
     if (selection && selection.toString().trim().length > 0) {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
-
       this.position = {
         top: rect.top + window.scrollY - 40,
         left: rect.left + window.scrollX
       };
-
       this.showToolbar = true;
     } else {
       this.showToolbar = false;
     }
   }
 
-  isLinkSelected = false;
-
-  checkLinkSelection() {
-  const selection = window.getSelection();
-  if (selection && selection.rangeCount > 0) {
-    const range = selection.getRangeAt(0);
-    const parent = range.startContainer.parentElement;
-    this.isLinkSelected = !!(parent && parent.closest('a'));
-  } else {
-    this.isLinkSelected = false;
+  saveState() {
+    const html = this.editorRef.nativeElement.innerHTML;
+    this.undoStack.push(html);
+    this.redoStack = [];
   }
+
+  undo() {
+    if (this.undoStack.length > 0) {
+      const current = this.editorRef.nativeElement.innerHTML;
+      this.redoStack.push(current);
+      const previous = this.undoStack.pop();
+      if (previous !== undefined) {
+        this.editorRef.nativeElement.innerHTML = previous;
+      }
+    }
+  }
+
+  redo() {
+    if (this.redoStack.length > 0) {
+      const current = this.editorRef.nativeElement.innerHTML;
+      this.undoStack.push(current);
+      const next = this.redoStack.pop();
+      if (next !== undefined) {
+        this.editorRef.nativeElement.innerHTML = next;
+      }
+    }
+  }
+
+  insertImage() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+
+  input.onchange = () => {
+    const file = input.files?.[0];
+    if (file) {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      this.http.post<{ path: string }>('http://localhost:3000/upload', formData)
+        .subscribe(res => {
+          const img = document.createElement('img');
+          img.src = res.path;
+          img.style.maxWidth = '100%';
+          this.insertBlockAtCursor(img);
+        });
+    }
+  };
+
+  input.click();
 }
 
+toggleForm() {
+  this.showForm = !this.showForm;
+}
+
+insertText(text: string) {
+  const span = document.createElement('p');
+  span.innerText = text;
+  this.insertBlockAtCursor(span);
+}
+
+insertHeading(tag: string) {
+  const heading = document.createElement(tag);
+  heading.innerText = 'Heading Text';
+  this.insertBlockAtCursor(heading);
+}
 
 format(command: string) {
   if (command === 'createLink') {
@@ -174,109 +265,10 @@ format(command: string) {
   } else {
     document.execCommand(command, false, '');
   }
-
   this.showToolbar = false;
 }
 
-
-  insertText(text: string) {
-    const span = document.createElement('p');
-    span.innerText = text;
-    this.insertNode(span);
-  }
-
-  insertHeading(tag: string) {
-  const heading = document.createElement(tag);
-  heading.innerText = 'Heading Text'; // तुम्ही इथे dynamic input पण टाकू शकता
-  this.insertNode(heading);
-}
-
-
-
-  private insertNode(node: Node) {
-    const selection = window.getSelection();
-    const editor = this.editorRef.nativeElement;
-
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-
-      
-      if (editor.contains(range.commonAncestorContainer)) {
-        range.deleteContents();
-        range.insertNode(node);
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      } else {
-      
-        editor.appendChild(node);
-      }
-    } else {
-      editor.appendChild(node);
-    }
-
-    editor.focus();
-  }
-
-
-  /* ---- Text Function End */
-
-
-selectedFontSize: string = '12px';
-fontSizes: string[] = ['8px', '10px', '12px', '14px', '18px', '24px', '36px', '48px', '72px', 'Default'];
-applyFontSize(size: string) {
-  this.selectedFontSize = size;
-
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) return;
-
-  const range = selection.getRangeAt(0);
-  if (range.collapsed) return;
-
-  let parentSpan = selection.anchorNode?.parentElement;
-
-
-  const extracted = range.cloneContents();
-
-  // Create a temporary container to modify HTML
-  const tempDiv = document.createElement('div');
-  tempDiv.appendChild(extracted);
-
-  // Remove all inline font-size styles from inner elements
-  const spans = tempDiv.querySelectorAll('span');
-  spans.forEach(span => {
-    span.style.fontSize = '';
-    if (span.getAttribute('style') === '') {
-      span.removeAttribute('style');
-    }
-  });
-
-  
-  if (parentSpan && parentSpan.tagName === 'SPAN') {
-    if (size === 'Default') {
-      parentSpan.style.fontSize = ''; // font-size हटवतो
-    } else {
-      parentSpan.style.fontSize = size;
-    }
-  } else if (size !== 'unset') {
-    const span = document.createElement('span');
-    span.style.fontSize = size;
-
-    const extracted = range.extractContents();
-    span.appendChild(extracted);
-    range.insertNode(span);
-
-    range.setStartAfter(span);
-    range.setEndAfter(span);
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }
-}
-
-
-
-
-  insertUnorderedList() {
+insertUnorderedList() {
   document.execCommand('insertUnorderedList', false, '');
 }
 
@@ -284,5 +276,59 @@ insertOrderedList() {
   document.execCommand('insertOrderedList', false, '');
 }
 
+insertTable() {
+  if (!this.rows || !this.cols || this.rows < 1 || this.cols < 1) {
+    alert('Please enter valid number of rows and columns');
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'table table-bordered table-striped';
+
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  for (let j = 0; j < this.cols; j++) {
+    const th = document.createElement('th');
+    th.textContent = `Header ${j + 1}`;
+    headRow.appendChild(th);
+  }
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  for (let i = 1; i < this.rows; i++) {
+    const tr = document.createElement('tr');
+    for (let j = 0; j < this.cols; j++) {
+      const td = document.createElement('td');
+      td.textContent = `Row ${i + 1} Col ${j + 1}`;
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+
+  this.insertBlockAtCursor(table);
+
+  this.showForm = false;
+  this.rows = undefined;
+  this.cols = undefined;
+}
+
+toggleSourceCode() {
+  this.isSourceView = !this.isSourceView;
+  const editor = this.editorRef.nativeElement;
+
+  if (this.isSourceView) {
+    const content = editor.innerHTML;
+    const formatted = beautifyHtml(content, {
+      indent_size: 2,
+      wrap_line_length: 80,
+      preserve_newlines: true
+    });
+    editor.innerText = formatted;
+  } else {
+    editor.innerHTML = editor.innerText;
+  }
+}
 
 }
