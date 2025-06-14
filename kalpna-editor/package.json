@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "install-all": "npm install && npm install --prefix backend",
+    "start": "concurrently \"ng serve\" \"npm start --prefix backend\"",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
@@ -18,8 +19,6 @@
     "@angular/platform-browser-dynamic": "^19.2.0",
     "@angular/router": "^19.2.0",
     "@fontsource/noto-sans-devanagari": "^5.2.5",
-    "bootstrap": "^5.3.6",
-    "bootstrap-icons": "^1.13.1",
     "html2pdf.js": "^0.10.3",
     "js-beautify": "^1.15.4",
     "jspdf-autotable": "^5.0.2",
@@ -33,6 +32,7 @@
     "@angular/cli": "^19.2.14",
     "@angular/compiler-cli": "^19.2.0",
     "@types/jasmine": "~5.1.0",
+    "concurrently": "^9.1.2",
     "jasmine-core": "~5.6.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
