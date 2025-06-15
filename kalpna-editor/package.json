@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "install-all": "npm install && npm install --prefix backend",
-    "start": "concurrently \"ng serve\" \"npm start --prefix backend\"",
+    "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
@@ -19,8 +19,10 @@
     "@angular/platform-browser-dynamic": "^19.2.0",
     "@angular/router": "^19.2.0",
     "@fontsource/noto-sans-devanagari": "^5.2.5",
+    "html-to-pdfmake": "^2.5.27",
     "html2pdf.js": "^0.10.3",
     "js-beautify": "^1.15.4",
+    "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "pdfmake": "^0.2.20",
     "rxjs": "~7.8.0",

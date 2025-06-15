@@ -1,6 +1,10 @@
-import { Component, ViewChild, ElementRef } from '@angular/core';
+import { Component, ViewChild, OnInit, ElementRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { html as beautifyHtml } from 'js-beautify';
+import { robotoFont } from '../../assets/font/roboto-font';
+import { pdfFontsCustom } from '../../assets/font/lohit-deva-font';
+
+import htmlToPdfmake from 'html-to-pdfmake';
 
 declare let window: any;
 
@@ -55,7 +59,17 @@ export class EditorComponent {
     this.checkLinkSelection();
     this.onTextSelect(event);
   }
+  ngOnInit() {
+    window.pdfMake.vfs = {
+      ...robotoFont.vfs,
+      ...pdfFontsCustom.vfs, // Lohit at last
+    };
 
+    window.pdfMake.fonts = {
+      ...robotoFont.fonts,
+      ...pdfFontsCustom.fonts, // Lohit at last
+    };
+  }
   private insertBlockAtCursor(node: HTMLElement) {
     this.restoreSelection();
 
@@ -441,5 +455,42 @@ export class EditorComponent {
     };
 
     input.click();
+  }
+
+  exportPDFWithPdfMake() {
+    let html = this.editorRef.nativeElement.innerHTML;
+
+    // ✅ Sanitize HTML: replace non-breaking spaces and &nbsp;
+    html = html.replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ');
+
+    // ✅ Convert HTML to pdfMake structure
+    let content = htmlToPdfmake(html);
+
+    // ✅ Assign fonts based on language
+    content = Array.isArray(content)
+      ? content.map((block: any) => {
+          const isMarathi = /[\u0900-\u097F]/.test(block.text || '');
+          return {
+            ...block,
+            font: isMarathi ? 'Lohit' : 'Roboto',
+          };
+        })
+      : content;
+
+    // ✅ Generate docDefinition
+    const docDefinition = {
+      content: Array.isArray(content) ? content : [content],
+      defaultStyle: {
+        font: 'Lohit',
+        fontSize: 14,
+      },
+      styles: {
+        bold: { bold: true },
+        italics: { italics: true },
+        bolditalics: { bold: true, italics: true },
+      },
+    };
+
+    window.pdfMake.createPdf(docDefinition).download('marathi-export.pdf');
   }
 }
