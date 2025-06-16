@@ -137,10 +137,19 @@
 </select> -->
 
   <div class="editorW">
-    <div #editor id="editor" contenteditable="true" [ngClass]="{ 'active': isSourceView }"
-      (mouseup)="handleEditorEvents($event)" (keyup)="handleEditorEvents($event)" (blur)="handleEditorEvents($event)"
-      (mouseover)="handleEditorEvents($event)" (input)="saveState()">
-    </div>
+   <div
+  #editor
+  id="editor"
+  contenteditable="true"
+  [ngClass]="{ 'active': isSourceView }"
+  (paste)="handlePaste($event)"
+  (mouseup)="handleEditorEvents($event)"
+  (keyup)="handleEditorEvents($event)"
+  (blur)="handleEditorEvents($event)"
+  (mouseover)="handleEditorEvents($event)"
+  (input)="saveState()"
+>
+</div>
   </div>
   <button (click)="exportPDFWithPdfMake()">Export PDF</button>
 </div>

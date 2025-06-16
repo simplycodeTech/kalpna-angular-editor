@@ -2,7 +2,7 @@ import { Component, ViewChild, OnInit, ElementRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { html as beautifyHtml } from 'js-beautify';
 import { robotoFont } from '../../assets/font/roboto-font';
-import { pdfFontsCustom } from '../../assets/font/lohit-deva-font';
+import { MuktaFont } from '../../assets/font/mukta-font-verified';
 
 import htmlToPdfmake from 'html-to-pdfmake';
 
@@ -60,16 +60,128 @@ export class EditorComponent {
     this.onTextSelect(event);
   }
   ngOnInit() {
+
+    this.editorRef.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
+
     window.pdfMake.vfs = {
       ...robotoFont.vfs,
-      ...pdfFontsCustom.vfs, // Lohit at last
+      ...MuktaFont.vfs,
     };
 
     window.pdfMake.fonts = {
       ...robotoFont.fonts,
-      ...pdfFontsCustom.fonts, // Lohit at last
+      Mukta: {
+    normal: 'Mukta-Regular.ttf',
+    bold: 'Mukta-Bold.ttf',
+    italics: 'Mukta-Regular.ttf',
+    bolditalics: 'Mukta-Regular.ttf',
+  },
     };
   }
+
+ handlePaste(event: ClipboardEvent) {
+  event.preventDefault();
+  const clipboardData = event.clipboardData;
+  const html = clipboardData?.getData('text/html') || '';
+  const plain = clipboardData?.getData('text/plain') || '';
+
+  console.log('HTML from clipboard:', html);
+  console.log('Plain text from clipboard:', plain);
+
+  if (html && html.includes('<')) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+  const removeTags = ['o:p', 'w:sdt', 'w:sdtpr', 'w:listitem', 'xml'];
+removeTags.forEach(tag => {
+  const elements = doc.getElementsByTagName(tag);
+  while (elements.length > 0) {
+    elements[0].remove();
+  }
+});
+
+    doc.querySelectorAll('*').forEach(el => {
+      if (el instanceof HTMLElement) {
+        el.removeAttribute('lang');
+
+        if (el.hasAttribute('style')) {
+          const style = el.getAttribute('style') || '';
+          const allowedAlignments = ['text-align:center', 'text-align: right', 'text-align: left'];
+          const cleanedStyle = style
+            .split(';')
+            .filter(rule => {
+              const trimmed = rule.trim().toLowerCase();
+              return (
+                trimmed &&
+                (allowedAlignments.includes(trimmed) ||
+                  (!trimmed.includes('font-family') &&
+                   !trimmed.includes('mso-')))
+              );
+            })
+            .join(';');
+
+          if (cleanedStyle.trim()) {
+            el.setAttribute('style', cleanedStyle);
+          } else {
+            el.removeAttribute('style');
+          }
+        }
+
+        const inner = el.innerHTML.trim();
+        if (!inner || inner === '<br>' || inner === '&nbsp;' || el.textContent?.trim() === '') {
+          el.remove();
+        }
+      }
+    });
+
+    let cleanHTML = doc.body.innerHTML;
+
+    // Clean empty <div><br></div> and normalize line breaks
+    cleanHTML = cleanHTML.replace(/<div>\s*(<br\s*\/?>)?\s*<\/div>/gi, '');
+    cleanHTML = cleanHTML.replace(/([^])\n(?=[^\n])/g, '$1<br>');
+    cleanHTML = cleanHTML.replace(/<br>\s*<br>/g, '<br>');
+
+    document.execCommand('insertHTML', false, cleanHTML);
+  } else if (plain) {
+    document.execCommand('insertText', false, plain);
+  }
+}
+
+exportPDFWithPdfMake() {
+  let html = this.editorRef.nativeElement.innerHTML;
+
+  html = html.replace(/<span[^>]*>\s*<\/span>/gi, ''); // remove empty spans
+  html = html.replace(/<div>\s*(<br\s*\/?>)?\s*<\/div>/gi, ''); // remove empty divs
+  html = html.replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ');
+
+  let content = htmlToPdfmake(html);
+
+  content = Array.isArray(content)
+    ? content.map((block: any) => {
+        const allText = JSON.stringify(block);
+        const isMarathi = /[\u0900-\u097F]/.test(allText);
+        return {
+          ...block,
+          font: isMarathi ? 'Mukta' : 'Roboto',
+        };
+      })
+    : content;
+
+  const docDefinition = {
+    content: Array.isArray(content) ? content : [content],
+    defaultStyle: {
+      font: 'Mukta',
+    },
+  };
+
+  console.log('VFS keys:', Object.keys(window.pdfMake.vfs));
+  console.log('Fonts config:', window.pdfMake.fonts);
+  console.log('First content block:', content[0]);
+  console.log('docDefinition:', docDefinition);
+
+  window.pdfMake.createPdf(docDefinition).download('marathi-export.pdf');
+}
+
   private insertBlockAtCursor(node: HTMLElement) {
     this.restoreSelection();
 
@@ -262,7 +374,7 @@ export class EditorComponent {
             img.style.display = 'block';
 
             // 🧊 Invisible resizable wrapper
-            const wrapper = document.createElement('div');
+            const wrapper = document.createElement('p');
             wrapper.contentEditable = 'false'; // prevent editing inside
             wrapper.style.display = 'inline-block';
             wrapper.style.resize = 'both';
@@ -457,40 +569,9 @@ export class EditorComponent {
     input.click();
   }
 
-  exportPDFWithPdfMake() {
-    let html = this.editorRef.nativeElement.innerHTML;
 
-    // ✅ Sanitize HTML: replace non-breaking spaces and &nbsp;
-    html = html.replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ');
 
-    // ✅ Convert HTML to pdfMake structure
-    let content = htmlToPdfmake(html);
 
-    // ✅ Assign fonts based on language
-    content = Array.isArray(content)
-      ? content.map((block: any) => {
-          const isMarathi = /[\u0900-\u097F]/.test(block.text || '');
-          return {
-            ...block,
-            font: isMarathi ? 'Lohit' : 'Roboto',
-          };
-        })
-      : content;
 
-    // ✅ Generate docDefinition
-    const docDefinition = {
-      content: Array.isArray(content) ? content : [content],
-      defaultStyle: {
-        font: 'Lohit',
-        fontSize: 14,
-      },
-      styles: {
-        bold: { bold: true },
-        italics: { italics: true },
-        bolditalics: { bold: true, italics: true },
-      },
-    };
 
-    window.pdfMake.createPdf(docDefinition).download('marathi-export.pdf');
-  }
 }
