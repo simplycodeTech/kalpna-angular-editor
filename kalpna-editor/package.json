@@ -19,6 +19,7 @@
     "@angular/platform-browser-dynamic": "^19.2.0",
     "@angular/router": "^19.2.0",
     "@fontsource/noto-sans-devanagari": "^5.2.5",
+    "highlight.js": "^11.11.1",
     "html-to-pdfmake": "^2.5.27",
     "html2pdf.js": "^0.10.3",
     "js-beautify": "^1.15.4",

@@ -16,6 +16,7 @@ declare let window: any;
 })
 export class EditorComponent {
   isSourceView: boolean = false;
+  sourceHtml: string = '';
   showToolbar = false;
   position = { top: 0, left: 0 };
   savedRange: Range | null = null;
@@ -26,28 +27,16 @@ export class EditorComponent {
   isLinkSelected = false;
   lineHeights: string[] = ['1', '1.5', '2', '2.5', '3'];
   fontSizes: string[] = [
-    '8px',
-    '10px',
-    '12px',
-    '14px',
-    '16px',
-    '18px',
-    '20px',
-    '22px',
-    '24px',
-    '28px',
-    '30px',
-    '32px',
-    '36px',
-    '48px',
-    '72px',
-    'Default',
+    '8px', '10px', '12px', '14px', '16px', '18px',
+    '20px', '22px', '24px', '28px', '30px', '32px',
+    '36px', '48px', '72px', 'Default',
   ];
   showForm = false;
   rows?: number;
   cols?: number;
 
-  @ViewChild('editor', { static: true }) editorRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('editor', { static: false }) editorRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('sourceEditor', { static: false }) sourceEditorRef!: ElementRef<HTMLTextAreaElement>;
   @ViewChild('textColorInput') textColorInput!: ElementRef<HTMLInputElement>;
   @ViewChild('bgColorInput') bgColorInput!: ElementRef<HTMLInputElement>;
 
@@ -59,8 +48,8 @@ export class EditorComponent {
     this.checkLinkSelection();
     this.onTextSelect(event);
   }
-  ngOnInit() {
 
+  ngOnInit() {
     this.editorRef.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
 
     window.pdfMake.vfs = {
@@ -71,15 +60,27 @@ export class EditorComponent {
     window.pdfMake.fonts = {
       ...robotoFont.fonts,
       Mukta: {
-    normal: 'Mukta-Regular.ttf',
-    bold: 'Mukta-Bold.ttf',
-    italics: 'Mukta-Regular.ttf',
-    bolditalics: 'Mukta-Regular.ttf',
-  },
+        normal: 'Mukta-Regular.ttf',
+        bold: 'Mukta-Bold.ttf',
+        italics: 'Mukta-Regular.ttf',
+        bolditalics: 'Mukta-Regular.ttf',
+      },
     };
   }
 
- handlePaste(event: ClipboardEvent) {
+
+private pasteLock = false;
+
+
+handlePaste(event: ClipboardEvent) {
+  if (this.pasteLock) {
+    console.warn('⛔ Skipping duplicate paste event');
+    return;
+  }
+
+  this.pasteLock = true;
+  setTimeout(() => this.pasteLock = false, 50); // Reset lock after 50ms
+
   event.preventDefault();
   const clipboardData = event.clipboardData;
   const html = clipboardData?.getData('text/html') || '';
@@ -88,19 +89,34 @@ export class EditorComponent {
   console.log('HTML from clipboard:', html);
   console.log('Plain text from clipboard:', plain);
 
+  
   if (html && html.includes('<')) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    
-  const removeTags = ['o:p', 'w:sdt', 'w:sdtpr', 'w:listitem', 'xml'];
-removeTags.forEach(tag => {
-  const elements = doc.getElementsByTagName(tag);
-  while (elements.length > 0) {
-    elements[0].remove();
+
+
+    const wordDropdowns = doc.querySelectorAll('w\\:sdt');
+wordDropdowns.forEach((node: Element) => {
+  const content = node.querySelector('w\\:sdtContent');
+  if (content) {
+    const text = content.textContent?.trim();
+    const span = doc.createElement('span');
+    span.innerText = text || '';
+    node.replaceWith(span);
   }
 });
 
+    const removeTags = ['o:p', 'w:sdt', 'w:sdtpr', 'w:listitem', 'xml', 'w:tbl', 'w:tr', 'w:tc', 'w:smarttag'];
+
+    removeTags.forEach(tag => {
+      const elements = doc.getElementsByTagName(tag);
+      while (elements.length > 0) {
+        elements[0].remove();
+      }
+    });
+
     doc.querySelectorAll('*').forEach(el => {
+      
       if (el instanceof HTMLElement) {
         el.removeAttribute('lang');
 
@@ -115,7 +131,7 @@ removeTags.forEach(tag => {
                 trimmed &&
                 (allowedAlignments.includes(trimmed) ||
                   (!trimmed.includes('font-family') &&
-                   !trimmed.includes('mso-')))
+                    !trimmed.includes('mso-')))
               );
             })
             .join(';');
@@ -126,6 +142,9 @@ removeTags.forEach(tag => {
             el.removeAttribute('style');
           }
         }
+if (el.tagName === 'P' && el.getAttribute('class')?.toLowerCase().includes('center')) {
+  el.style.textAlign = 'center';
+}
 
         const inner = el.innerHTML.trim();
         if (!inner || inner === '<br>' || inner === '&nbsp;' || el.textContent?.trim() === '') {
@@ -136,16 +155,35 @@ removeTags.forEach(tag => {
 
     let cleanHTML = doc.body.innerHTML;
 
-    // Clean empty <div><br></div> and normalize line breaks
-    cleanHTML = cleanHTML.replace(/<div>\s*(<br\s*\/?>)?\s*<\/div>/gi, '');
-    cleanHTML = cleanHTML.replace(/([^])\n(?=[^\n])/g, '$1<br>');
-    cleanHTML = cleanHTML.replace(/<br>\s*<br>/g, '<br>');
+    cleanHTML = cleanHTML
+        .replace(/<div>\s*(<br\s*\/?>)?\s*<\/div>/gi, '')
+        .replace(/<br>\s*<br>/g, '')
+        .replace(/<br\s*\/?>/g, '')
+        .replace(/\n+/g, '')
+        .replace(/\s{2,}/g, ' ') 
+        .replace(/\u00A0/g, ' ')
+        .replace(/<br\s*\/?>\s*(<\/?(ul|ol|li|p|div|table|tr|td|th|h\d))>/gi, '$1')
+        .replace(/(<\/?(ul|ol|li|p|div|table|tr|td|th|h\d)[^>]*>)\s*<br\s*\/?>/gi, '$1')
+        .replace(/<(li|p|div)[^>]*>\s*<br\s*\/?>\s*<\/\1>/gi, '')
+        .replace(/(<br\s*\/?>\s*){2,}/gi, '<br>')
+        .replace(/^<br\s*\/?>|<br\s*\/?>$/gi, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/<p>\s*<\/p>/gi, '')               // completely blank <p>
+        .replace(/<p>(&nbsp;|\s|<br\s*\/?>)*<\/p>/gi, '')  // <p> with only space or <br>
+        .replace(/<p><\/p>/gi, '')
+        .replace(/(<\/span>)(<span[^>]*>)/g, (match, p1, p2) => {
+  return p1.endsWith('> ') || p2.startsWith(' <') ? `${p1}${p2}` : `${p1} ${p2}`;
+});
 
+    this.restoreSelection();
     document.execCommand('insertHTML', false, cleanHTML);
   } else if (plain) {
+    this.restoreSelection();
     document.execCommand('insertText', false, plain);
   }
 }
+
+
 
 exportPDFWithPdfMake() {
   let html = this.editorRef.nativeElement.innerHTML;
@@ -243,6 +281,8 @@ exportPDFWithPdfMake() {
       selection.addRange(this.savedRange);
     }
   }
+
+
 
   applyStyle(styleType: keyof CSSStyleDeclaration, value: string) {
     if (!this.savedRange || this.savedRange.collapsed) return;
@@ -433,17 +473,26 @@ exportPDFWithPdfMake() {
     this.showForm = !this.showForm;
   }
 
-  insertText(text: string) {
-    const span = document.createElement('p');
-    span.innerText = text;
-    this.insertBlockAtCursor(span);
-  }
+insertText(text: string) {
+  const p = document.createElement('p');
+  p.innerText = text;
+  this.insertBlockAtCursor(p);
+}
 
-  insertHeading(tag: string) {
-    const heading = document.createElement(tag);
-    heading.innerText = 'Heading Text';
-    this.insertBlockAtCursor(heading);
-  }
+insertHeading(tag: string) {
+  const heading = document.createElement(tag);
+  heading.innerText = 'Heading Text';
+  this.insertBlockAtCursor(heading);
+}
+removeEmptyPTags() {
+  const editor = this.editorRef.nativeElement;
+  editor.innerHTML = editor.innerHTML
+    .replace(/<p>\s*<\/p>/gi, '')
+    .replace(/<p>(&nbsp;|\s|<br\s*\/?>)*<\/p>/gi, '')
+    .replace(/<p><\/p>/gi, '');
+}
+
+
 
   format(command: string) {
     if (command === 'createLink') {
@@ -517,6 +566,8 @@ exportPDFWithPdfMake() {
   private cleanWhiteSpaceSpans(html: string): string {
     return html.replace(/<span style="white-space:\s*pre">\s*<\/span>/gi, '');
   }
+
+  
 
   toggleSourceCode() {
     this.isSourceView = !this.isSourceView;
