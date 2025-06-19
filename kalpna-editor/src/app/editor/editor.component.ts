@@ -1,9 +1,9 @@
-import { Component, ViewChild, OnInit, ElementRef } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewInit  } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { html as beautifyHtml } from 'js-beautify';
 import { robotoFont } from '../../assets/font/roboto-font';
 import { MuktaFont } from '../../assets/font/mukta-font-verified';
-
+import * as mammoth from 'mammoth';
 import htmlToPdfmake from 'html-to-pdfmake';
 
 declare let window: any;
@@ -14,7 +14,7 @@ declare let window: any;
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.css',
 })
-export class EditorComponent {
+export class EditorComponent implements  AfterViewInit {
   isSourceView: boolean = false;
   sourceHtml: string = '';
   showToolbar = false;
@@ -49,24 +49,51 @@ export class EditorComponent {
     this.onTextSelect(event);
   }
 
-  ngOnInit() {
-    this.editorRef.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
+  handleDocxUpload(event: any) {
+  const file = event.target.files[0];
+  if (!file) return;
 
-    window.pdfMake.vfs = {
-      ...robotoFont.vfs,
-      ...MuktaFont.vfs,
-    };
+  const reader = new FileReader();
+  reader.onload = async (e: any) => {
+    const arrayBuffer = e.target.result;
+    const result = await mammoth.convertToHtml({ arrayBuffer });
 
-    window.pdfMake.fonts = {
-      ...robotoFont.fonts,
-      Mukta: {
-        normal: 'Mukta-Regular.ttf',
-        bold: 'Mukta-Bold.ttf',
-        italics: 'Mukta-Regular.ttf',
-        bolditalics: 'Mukta-Regular.ttf',
-      },
-    };
+    this.editorRef.nativeElement.innerHTML = result.value; // clean HTML inject
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+triggerFileUpload() {
+  const fileInput = document.getElementById('wordUpload') as HTMLInputElement;
+  if (fileInput) {
+    fileInput.click();
   }
+}
+
+
+
+  ngAfterViewInit() {
+  this.editorRef.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
+
+  window.pdfMake.vfs = {
+    ...robotoFont.vfs,
+    'Mukta-Regular.ttf': MuktaFont.vfs['Mukta-Regular.ttf'],
+    'Mukta-Bold.ttf': MuktaFont.vfs['Mukta-Bold.ttf'],
+  };
+
+  window.pdfMake.fonts = {
+    ...robotoFont.fonts,
+    Mukta: {
+      normal: 'Mukta-Regular.ttf',
+      bold: 'Mukta-Bold.ttf',
+      italics: 'Mukta-Regular.ttf',
+      bolditalics: 'Mukta-Regular.ttf',
+    }
+  };
+
+  console.log('✅ Fonts loaded:', Object.keys(window.pdfMake.vfs));
+}
+
 
 
 private pasteLock = false;
@@ -86,8 +113,8 @@ handlePaste(event: ClipboardEvent) {
   const html = clipboardData?.getData('text/html') || '';
   const plain = clipboardData?.getData('text/plain') || '';
 
-  console.log('HTML from clipboard:', html);
-  console.log('Plain text from clipboard:', plain);
+  // console.log('HTML from clipboard:', html);
+  // console.log('Plain text from clipboard:', plain);
 
   
   if (html && html.includes('<')) {
@@ -155,26 +182,53 @@ if (el.tagName === 'P' && el.getAttribute('class')?.toLowerCase().includes('cent
 
     let cleanHTML = doc.body.innerHTML;
 
-    cleanHTML = cleanHTML
-        .replace(/<div>\s*(<br\s*\/?>)?\s*<\/div>/gi, '')
-        .replace(/<br>\s*<br>/g, '')
-        .replace(/<br\s*\/?>/g, '')
-        .replace(/\n+/g, '')
-        .replace(/\s{2,}/g, ' ') 
-        .replace(/\u00A0/g, ' ')
-        .replace(/<br\s*\/?>\s*(<\/?(ul|ol|li|p|div|table|tr|td|th|h\d))>/gi, '$1')
-        .replace(/(<\/?(ul|ol|li|p|div|table|tr|td|th|h\d)[^>]*>)\s*<br\s*\/?>/gi, '$1')
-        .replace(/<(li|p|div)[^>]*>\s*<br\s*\/?>\s*<\/\1>/gi, '')
-        .replace(/(<br\s*\/?>\s*){2,}/gi, '<br>')
-        .replace(/^<br\s*\/?>|<br\s*\/?>$/gi, '')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/<p>\s*<\/p>/gi, '')               // completely blank <p>
-        .replace(/<p>(&nbsp;|\s|<br\s*\/?>)*<\/p>/gi, '')  // <p> with only space or <br>
-        .replace(/<p><\/p>/gi, '')
-        .replace(/(<\/span>)(<span[^>]*>)/g, (match, p1, p2) => {
-  return p1.endsWith('> ') || p2.startsWith(' <') ? `${p1}${p2}` : `${p1} ${p2}`;
-});
+ cleanHTML = cleanHTML
+  .replace(/<div>\s*(<br\s*\/?>)?\s*<\/div>/gi, '')
+  .replace(/<br>\s*<br>/g, '')
+  .replace(/<br\s*\/?>/g, '')
+  .replace(/\n+/g, '')
+  .replace(/\s{2,}/g, ' ')
+  .replace(/\u00A0/g, ' ')
+  .replace(/<br\s*\/?>\s*(<\/?(ul|ol|li|p|div|table|tr|td|th|h\d))>/gi, '$1')
+  .replace(/(<\/?(ul|ol|li|p|div|table|tr|td|th|h\d)[^>]*>)\s*<br\s*\/?>/gi, '$1')
+  .replace(/<(li|p|div)[^>]*>\s*<br\s*\/?>\s*<\/\1>/gi, '')
+  .replace(/(<br\s*\/?>\s*){2,}/gi, '<br>')
+  .replace(/^<br\s*\/?>|<br\s*\/?>$/gi, '')
+  .replace(/&nbsp;/g, ' ')
+  .replace(/<p>\s*<\/p>/gi, '')
+  .replace(/<p>(&nbsp;|\s|<br\s*\/?>)*<\/p>/gi, '')
+  .replace(/<p><\/p>/gi, '')
 
+  // ✅ Merge consecutive span tags with Devanagari characters
+  .replace(/(<span[^>]*>)([\u0900-\u097F]+)<\/span>\s*(<span[^>]*>)([\u0900-\u097F]+)<\/span>/g,
+    (_match, span1, text1, span2, text2) => {
+      const combined = text1 + text2;
+      // Use span1's style, discard second
+      const styleMatch = span1.match(/style="[^"]*"/);
+      const style = styleMatch ? styleMatch[0] : '';
+      return `<span ${style}>${combined}</span>`;
+    })
+
+  // ✅ Fix span fusion edge case
+  .replace(/(<\/span>)(<span[^>]*>)/g, (match, p1, p2) => {
+    return p1.endsWith('> ') || p2.startsWith(' <') ? `${p1}${p2}` : `${p1} ${p2}`;
+  })
+
+  // ✅ Strip hidden/zero-width Unicode
+  .replace(/\u200C/g, '')     // Zero-width non-joiner
+  .replace(/\u200D/g, '')     // Zero-width joiner
+  .replace(/\u200B/g, '')     // Zero-width space
+  .replace(/\uFEFF/g, '')     // BOM
+  .replace(/\u202F/g, ' ')    // Narrow no-break space
+  .replace(/\u2060/g, '')     // Word Joiner
+  .replace(/\u205F/g, ' ')    // Medium mathematical space
+  .replace(/\u3000/g, ' ')    // Ideographic space
+  .replace(/\u180E/g, '')     // Mongolian vowel separator
+
+  // ✅ Join Devanagari characters if any special char is in between
+  .replace(/([\u0900-\u097F])[\u200B\u200C\u200D\u00A0\u202F\u2060\u205F\u3000\u180E]+([\u0900-\u097F])/g, '$1$2');
+
+    
     this.restoreSelection();
     document.execCommand('insertHTML', false, cleanHTML);
   } else if (plain) {
@@ -194,6 +248,15 @@ exportPDFWithPdfMake() {
 
   let content = htmlToPdfmake(html);
 
+  if (Array.isArray(content)) {
+  content = content.map((block: any) => {
+    if (block.table) {
+      const colCount = block.table.body[0]?.length || 1;
+      block.table.widths = Array(colCount).fill('*');  // ✅ full width spread
+    }
+    return block;
+  });
+}
   content = Array.isArray(content)
     ? content.map((block: any) => {
         const allText = JSON.stringify(block);
@@ -210,6 +273,17 @@ exportPDFWithPdfMake() {
     defaultStyle: {
       font: 'Mukta',
     },
+     pageSize: 'A4',
+  pageMargins: [40, 60, 40, 60],
+  tableLayouts: {
+    auto: {
+      hLineWidth: () => 0.5,
+      vLineWidth: () => 0.5,
+      hLineColor: () => '#aaa',
+      vLineColor: () => '#aaa',
+    },
+  },
+    
   };
 
   console.log('VFS keys:', Object.keys(window.pdfMake.vfs));
@@ -525,43 +599,61 @@ removeEmptyPTags() {
     document.execCommand('insertOrderedList', false, '');
   }
 
-  insertTable() {
-    if (!this.rows || !this.cols || this.rows < 1 || this.cols < 1) {
-      alert('Please enter valid number of rows and columns');
-      return;
-    }
-
-    const table = document.createElement('table');
-    table.className = 'table table-bordered table-striped';
-
-    const thead = document.createElement('thead');
-    const headRow = document.createElement('tr');
-    for (let j = 0; j < this.cols; j++) {
-      const th = document.createElement('th');
-      th.textContent = `Header ${j + 1}`;
-      headRow.appendChild(th);
-    }
-    thead.appendChild(headRow);
-    table.appendChild(thead);
-
-    const tbody = document.createElement('tbody');
-    for (let i = 1; i < this.rows; i++) {
-      const tr = document.createElement('tr');
-      for (let j = 0; j < this.cols; j++) {
-        const td = document.createElement('td');
-        td.textContent = `Row ${i + 1} Col ${j + 1}`;
-        tr.appendChild(td);
-      }
-      tbody.appendChild(tr);
-    }
-    table.appendChild(tbody);
-
-    this.insertBlockAtCursor(table);
-
-    this.showForm = false;
-    this.rows = undefined;
-    this.cols = undefined;
+insertTable() {
+  if (!this.rows || !this.cols || this.rows < 1 || this.cols < 1) {
+    alert('Please enter valid number of rows and columns');
+    return;
   }
+
+  const table = document.createElement('table');
+  table.setAttribute('border', '1');
+  table.style.width = '100%';
+  table.style.tableLayout = 'auto';
+  table.style.borderCollapse = 'collapse';
+  table.style.fontSize = '14px';
+
+  const colWidth = `${100 / this.cols!}%`; // ✅ Dynamic column width
+
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+
+  for (let j = 0; j < this.cols!; j++) {
+    const th = document.createElement('th');
+    th.textContent = `Header ${j + 1}`;
+    th.style.border = '1px solid black';
+    th.style.padding = '6px';
+    th.style.backgroundColor = '#f1f1f1';
+    th.style.textAlign = 'left';
+    th.style.width = colWidth; // ✅ width per column
+    headRow.appendChild(th);
+  }
+
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+
+  for (let i = 1; i < this.rows!; i++) {
+    const tr = document.createElement('tr');
+    for (let j = 0; j < this.cols!; j++) {
+      const td = document.createElement('td');
+      td.textContent = `Row ${i + 1} Col ${j + 1}`;
+      td.style.border = '1px solid black';
+      td.style.padding = '6px';
+      td.style.width = colWidth; // ✅ width per column
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+
+  table.appendChild(tbody);
+  this.insertBlockAtCursor(table);
+
+  this.rows = undefined;
+  this.cols = undefined;
+  this.showForm = false;
+}
+
 
   private cleanWhiteSpaceSpans(html: string): string {
     return html.replace(/<span style="white-space:\s*pre">\s*<\/span>/gi, '');

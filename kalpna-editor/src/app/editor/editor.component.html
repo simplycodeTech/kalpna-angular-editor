@@ -54,6 +54,21 @@
     </button>
     <button title="View Source Code" class="btn btn-text" [ngClass]="isSourceView ? 'btn-dark' : 'btn-primary'"
       (click)="toggleSourceCode()">{{ isSourceView ? 'Visual' : 'Source Code' }}</button>
+
+      <input
+  type="file"
+  id="wordUpload"
+  (change)="handleDocxUpload($event)"
+  accept=".docx"
+  hidden
+/>
+
+<!-- Styled Button -->
+<button type="button" (click)="triggerFileUpload()" class="btn btn-primary">
+  <i class="bi bi-upload"></i> Upload Word File
+</button>
+
+
   </div>
 
   <div *ngIf="showForm" class="form-container mt-2">
@@ -137,7 +152,7 @@
 </select> -->
 
   <div class="editorW">
-    <label>Please paste or type content</label>
+ 
    <div
   #editor
   id="editor"

@@ -44,16 +44,6 @@ button {
   margin-right: 5px;
 }
 
-img,
-table,
-h1,
-h2,
-p {
-  margin-bottom: 8px;
-}
-
-
-
 
 .form-container {
   padding: 5px 0;
@@ -71,6 +61,21 @@ p {
 .toolbar .btn.btn-text {
   padding: 9px 10px;
 }
+
+
+button.upload-btn {
+  background-color: #2e6da4;
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button.upload-btn:hover {
+  background-color: #204d74;
+}
+
 
 .toolbar .btn {
   white-space: nowrap !important;
