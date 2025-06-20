@@ -184,12 +184,17 @@ if (el.tagName === 'P' && el.getAttribute('class')?.toLowerCase().includes('cent
 
  cleanHTML = cleanHTML
   .replace(/<div>\s*(<br\s*\/?>)?\s*<\/div>/gi, '')
+    .replace(/(<br\s*\/?>\s*){2,}/gi, '<br>')  
   .replace(/<br>\s*<br>/g, '')
   .replace(/<br\s*\/?>/g, '')
   .replace(/\n+/g, '')
+  .replace(/\u00A0/g, ' ')   
   .replace(/\s{2,}/g, ' ')
+  .replace(/^<br\s*\/?>|<br\s*\/?>$/gi, '') 
   .replace(/\u00A0/g, ' ')
+  .replace(/<br\s*\/?>\s*(<\/?(ul|ol|li|table|thead|tbody|tr|td|th))/gi, '$1') 
   .replace(/<br\s*\/?>\s*(<\/?(ul|ol|li|p|div|table|tr|td|th|h\d))>/gi, '$1')
+  .replace(/(<\/?(ul|ol|li|table|thead|tbody|tr|td|th)[^>]*>)\s*<br\s*\/?>/gi, '$1')
   .replace(/(<\/?(ul|ol|li|p|div|table|tr|td|th|h\d)[^>]*>)\s*<br\s*\/?>/gi, '$1')
   .replace(/<(li|p|div)[^>]*>\s*<br\s*\/?>\s*<\/\1>/gi, '')
   .replace(/(<br\s*\/?>\s*){2,}/gi, '<br>')
@@ -242,21 +247,12 @@ if (el.tagName === 'P' && el.getAttribute('class')?.toLowerCase().includes('cent
 exportPDFWithPdfMake() {
   let html = this.editorRef.nativeElement.innerHTML;
 
-  html = html.replace(/<span[^>]*>\s*<\/span>/gi, ''); // remove empty spans
-  html = html.replace(/<div>\s*(<br\s*\/?>)?\s*<\/div>/gi, ''); // remove empty divs
-  html = html.replace(/\u00A0/g, ' ').replace(/&nbsp;/g, ' ');
+  html = html
+    .replace(/<p>\s*<\/p>/gi, '')
+    .replace(/<br\s*\/?>\s*<br\s*\/?>/gi, '<br>');
 
   let content = htmlToPdfmake(html);
 
-  if (Array.isArray(content)) {
-  content = content.map((block: any) => {
-    if (block.table) {
-      const colCount = block.table.body[0]?.length || 1;
-      block.table.widths = Array(colCount).fill('*');  // ✅ full width spread
-    }
-    return block;
-  });
-}
   content = Array.isArray(content)
     ? content.map((block: any) => {
         const allText = JSON.stringify(block);
@@ -270,29 +266,20 @@ exportPDFWithPdfMake() {
 
   const docDefinition = {
     content: Array.isArray(content) ? content : [content],
+    
     defaultStyle: {
       font: 'Mukta',
+      fontSize: 13,
+      lineHeight:0.7,
     },
-     pageSize: 'A4',
-  pageMargins: [40, 60, 40, 60],
-  tableLayouts: {
-    auto: {
-      hLineWidth: () => 0.5,
-      vLineWidth: () => 0.5,
-      hLineColor: () => '#aaa',
-      vLineColor: () => '#aaa',
-    },
-  },
-    
+   
+    pageSize: 'A4',
+    pageMargins: [40, 60, 40, 60],
   };
-
-  console.log('VFS keys:', Object.keys(window.pdfMake.vfs));
-  console.log('Fonts config:', window.pdfMake.fonts);
-  console.log('First content block:', content[0]);
-  console.log('docDefinition:', docDefinition);
 
   window.pdfMake.createPdf(docDefinition).download('marathi-export.pdf');
 }
+
 
   private insertBlockAtCursor(node: HTMLElement) {
     this.restoreSelection();
@@ -548,22 +535,60 @@ exportPDFWithPdfMake() {
   }
 
 insertText(text: string) {
-  const p = document.createElement('p');
-  p.innerText = text;
-  this.insertBlockAtCursor(p);
+  if (!this.savedRange) return;
+  this.restoreSelection();
+
+  const textNode = document.createTextNode(text);
+
+  const selection = window.getSelection();
+  const range = selection?.getRangeAt(0);
+  if (!range) return;
+
+  range.deleteContents();
+  range.insertNode(textNode);
+
+  const newRange = document.createRange();
+  newRange.setStartAfter(textNode);
+  newRange.setEndAfter(textNode);
+  selection?.removeAllRanges();
+  selection?.addRange(newRange);
+  this.savedRange = newRange;
 }
 
 insertHeading(tag: string) {
+  if (!this.savedRange) return;
+
+  const selection = window.getSelection();
   const heading = document.createElement(tag);
-  heading.innerText = 'Heading Text';
-  this.insertBlockAtCursor(heading);
+  heading.textContent = 'Heading Text';
+
+  const range = this.savedRange.cloneRange(); // ✅ Use saved range
+  range.deleteContents();
+  range.insertNode(heading);
+
+  // Move cursor after heading
+  const newRange = document.createRange();
+  newRange.setStartAfter(heading);
+  newRange.setEndAfter(heading);
+  selection?.removeAllRanges();
+  selection?.addRange(newRange);
+
+  this.savedRange = newRange; // 🔁 Update saved range
 }
+
+
 removeEmptyPTags() {
   const editor = this.editorRef.nativeElement;
   editor.innerHTML = editor.innerHTML
     .replace(/<p>\s*<\/p>/gi, '')
+    .replace(/\n+/g, '')
+    .replace(/\s{2,}/g, ' ')
     .replace(/<p>(&nbsp;|\s|<br\s*\/?>)*<\/p>/gi, '')
-    .replace(/<p><\/p>/gi, '');
+    .replace(/<p><\/p>/gi, '')
+    .replace(/<br\s*\/?>/gi, '') // remove all <br>
+    .replace(/&nbsp;/g, ' ')     // convert nbsp to space
+    .replace(/<div>\s*<br\s*\/?>\s*<\/div>/gi, '') // ✅ remove <div><br></div>
+    .replace(/(<br\s*\/?>\s*){2,}/gi, '<br>');     // collapse multiple <br>
 }
 
 
@@ -660,26 +685,35 @@ insertTable() {
   }
 
   
+toggleSourceCode() {
+  this.isSourceView = !this.isSourceView;
+  const editor = this.editorRef.nativeElement;
 
-  toggleSourceCode() {
-    this.isSourceView = !this.isSourceView;
-    const editor = this.editorRef.nativeElement;
+  if (this.isSourceView) {
+    // ✅ Save original HTML for restore
+    this.sourceHtml = editor.innerHTML;
 
-    if (this.isSourceView) {
-      const content = editor.innerHTML;
-      const formatted = beautifyHtml(content, {
-        indent_size: 2,
-        wrap_line_length: 80,
-        preserve_newlines: true,
-      });
+    // ✅ Show beautified text as preview only
+    const formatted = beautifyHtml(this.sourceHtml, {
+      indent_size: 2,
+      wrap_line_length: 80,
+      preserve_newlines: true,
+    });
 
-      // ✅ Clean junk spans
-      const cleaned = this.cleanWhiteSpaceSpans(formatted);
-      editor.innerText = cleaned;
-    } else {
-      editor.innerHTML = editor.innerText;
-    }
+    editor.innerText = formatted;
+    editor.setAttribute('contenteditable', 'true'); // disable editing
+    editor.style.whiteSpace = 'pre-wrap';
+    editor.style.fontFamily = 'monospace';
+  } else {
+    // ✅ Restore back original unformatted HTML
+    editor.innerHTML = this.sourceHtml;
+    editor.setAttribute('contenteditable', 'true');
+    editor.style.whiteSpace = '';
+    editor.style.fontFamily = '';
   }
+}
+
+
   insertPDF() {
     const input = document.createElement('input');
     input.type = 'file';

@@ -55,6 +55,8 @@
     <button title="View Source Code" class="btn btn-text" [ngClass]="isSourceView ? 'btn-dark' : 'btn-primary'"
       (click)="toggleSourceCode()">{{ isSourceView ? 'Visual' : 'Source Code' }}</button>
 
+
+
       <input
   type="file"
   id="wordUpload"
@@ -65,7 +67,7 @@
 
 <!-- Styled Button -->
 <button type="button" (click)="triggerFileUpload()" class="btn btn-primary">
-  <i class="bi bi-upload"></i> Upload Word File
+ Upload Word File
 </button>
 
 
@@ -141,6 +143,7 @@
         (input)="applyColorLive('backgroundColor', $event)" />
     </div>
 
+
   </div>
 
   <!-- <select (change)="setLineHeight($event.target.value)">
@@ -166,6 +169,8 @@
   (input)="saveState()"
 >
 </div>
+
+
   </div>
-  <button (click)="exportPDFWithPdfMake()">Export PDF</button>
+  <button class="btn btn-danger rounded-0 px-4 py-2 mt-3" (click)="exportPDFWithPdfMake()">Export PDF</button>
 </div>

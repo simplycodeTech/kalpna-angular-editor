@@ -1,5 +1,7 @@
 
 
+
+
 .editorW {
   border: 1px solid #ddd;
   border-radius: 10px;
@@ -17,6 +19,33 @@
   background: #fff;
   line-height:normal;
 }
+
+
+#editor h1 {
+  font-size: 2.2rem;
+}
+
+#editor h2 {
+  font-size: 2rem;
+}
+
+#editor h3 {
+  font-size: 1.8rem;
+}
+
+#editor h4 {
+  font-size: 1.5rem;
+}
+
+#editor h5 {
+  font-size: 1.3rem;
+}
+
+#editor h6 {
+  font-size: 1.1rem;
+}
+
+
 
 #editor.active {
   background-color: #E7EDFA;
