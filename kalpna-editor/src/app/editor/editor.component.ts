@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef, AfterViewInit  } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewInit, Input  } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { html as beautifyHtml } from 'js-beautify';
 import { robotoFont } from '../../assets/font/roboto-font';
@@ -15,6 +15,13 @@ declare let window: any;
   styleUrl: './editor.component.css',
 })
 export class EditorComponent implements  AfterViewInit {
+   @Input() licenseKey?: string;
+   @Input() uploadHook: {
+  image?: (file: File) => Promise<string>,
+  pdf?: (file: File) => Promise<string>
+} = {};
+
+   showWatermark =true;
   isSourceView: boolean = false;
   sourceHtml: string = '';
   showToolbar = false;
@@ -40,7 +47,34 @@ export class EditorComponent implements  AfterViewInit {
   @ViewChild('textColorInput') textColorInput!: ElementRef<HTMLInputElement>;
   @ViewChild('bgColorInput') bgColorInput!: ElementRef<HTMLInputElement>;
 
-  constructor(private http: HttpClient) {}
+
+
+
+  constructor(private http: HttpClient) {
+ this.uploadHook = {
+    image: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await this.http
+        .post<{ url: string }>('http://localhost:3000/api/upload-img', formData)
+        .toPromise();
+
+      return `http://localhost:3000${res?.url}`;
+    },
+    pdf: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await this.http
+        .post<{ url: string }>('http://localhost:3000/api/upload-pdf', formData)
+        .toPromise();
+
+      return `http://localhost:3000${res?.url}`;
+    }
+  };
+    
+  }
 
   handleEditorEvents(event: any) {
     this.saveSelection();
@@ -70,7 +104,19 @@ triggerFileUpload() {
   }
 }
 
+editorEnabled: boolean = true;
 
+ngOnInit() {
+  const isFree = this.licenseKey?.startsWith('FREE') === true;
+  const isPro = this.licenseKey?.startsWith('PRO') === true;
+
+  this.showWatermark = isFree;
+  this.editorEnabled = isFree || isPro;
+
+  if (!this.editorEnabled) {
+    console.error('❌ Invalid or missing license. Editor is disabled.');
+  }
+}
 
   ngAfterViewInit() {
   this.editorRef.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
@@ -91,8 +137,22 @@ triggerFileUpload() {
     }
   };
 
-  console.log('✅ Fonts loaded:', Object.keys(window.pdfMake.vfs));
+setTimeout(() => {
+
+  if (this.licenseKey?.startsWith('FREE')) {
+  setInterval(() => {
+    const watermark = document.querySelector('.watermark-box');
+    if (!watermark) {
+      console.warn('⚠️ Watermark removed – disabling editor');
+      this.editorRef.nativeElement.setAttribute('contenteditable', 'false');
+        this.editorRef.nativeElement.innerHTML = `<div class="text-danger text-center">⚠️ Kalpna Editor is disabled due to missing, invalid license or watermark removal. </div>`;
+    }
+  }, 50); // check every 5 seconds
 }
+  }, 1000); // give DOM time to render
+
+}
+
 
 
 
@@ -632,10 +692,10 @@ insertTable() {
 
   const table = document.createElement('table');
   table.setAttribute('border', '1');
-  table.style.width = '100%';
-  table.style.tableLayout = 'auto';
-  table.style.borderCollapse = 'collapse';
-  table.style.fontSize = '14px';
+ // table.style.width = '100%';
+ // table.style.tableLayout = 'auto';
+ // table.style.borderCollapse = 'collapse';
+//  table.style.fontSize = '14px';
 
   const colWidth = `${100 / this.cols!}%`; // ✅ Dynamic column width
 
@@ -645,11 +705,11 @@ insertTable() {
   for (let j = 0; j < this.cols!; j++) {
     const th = document.createElement('th');
     th.textContent = `Header ${j + 1}`;
-    th.style.border = '1px solid black';
-    th.style.padding = '6px';
-    th.style.backgroundColor = '#f1f1f1';
-    th.style.textAlign = 'left';
-    th.style.width = colWidth; // ✅ width per column
+   //  th.style.border = '1px solid black';
+    // th.style.padding = '6px';
+    // th.style.backgroundColor = '#f1f1f1';
+    // th.style.textAlign = 'left';
+   // th.style.width = colWidth; // ✅ width per column
     headRow.appendChild(th);
   }
 
@@ -663,9 +723,9 @@ insertTable() {
     for (let j = 0; j < this.cols!; j++) {
       const td = document.createElement('td');
       td.textContent = `Row ${i + 1} Col ${j + 1}`;
-      td.style.border = '1px solid black';
-      td.style.padding = '6px';
-      td.style.width = colWidth; // ✅ width per column
+   //    td.style.border = '1px solid black';
+      // td.style.padding = '6px';
+    //  td.style.width = colWidth; // ✅ width per column
       tr.appendChild(td);
     }
     tbody.appendChild(tr);

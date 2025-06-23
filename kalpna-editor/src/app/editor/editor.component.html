@@ -1,18 +1,18 @@
-<div class="mx-auto w-75">
+<div class="mx-auto">
 
   <div class="toolbar d-md-flex">
     <div class="btn-group" role="group" aria-label="Basic example">
-      <button title="Upload Image" class="btn  btn-outline-secondary" (click)="insertImage()"><img
-          src="../../assets/images/icon/photo.png" class="icon" /> </button>
+      <button title="Upload Image" class="btn  btn-outline-secondary" (click)="insertImage()">
+        <i class="bi bi-image"></i>
+       </button>
       <!--<button class="btn btn-outline-secondary" (click)="insertTable()"><i class="bi bi-table"></i></button>-->
-      <button title="Insert Table" class="btn btn-outline-secondary" (click)="toggleForm()"><img
-          src="../../assets/images/icon/table.png" class="icon" /></button>
-      <button title="Insert Paragraph" class="btn btn-outline-secondary" (click)="insertText('Sample Text')">T</button>
+      <button title="Insert Table" class="btn btn-outline-secondary" (click)="toggleForm()"><i class="bi bi-table"></i></button>
+      <button title="Insert Paragraph" class="btn btn-outline-secondary" (click)="insertText('Sample Text')"><i class="bi bi-fonts"></i></button>
     </div>
     <div class="dropdown d-inline">
       <button title="Insert Heading" class="btn btn-text btn-outline-secondary dropdown-toggle" type="button"
         data-bs-toggle="dropdown">
-        H1
+       <i class="bi bi-type-h1"></i>
       </button>
       <ul class="dropdown-menu">
         <li><a class="dropdown-item" (click)="insertHeading('h1')">H1</a></li>
@@ -25,7 +25,7 @@
     </div>
 
     <button title="Create Link" class="btn btn-outline-secondary" (click)="format('createLink')">
-      <img src="../../assets/images/icon/link.png" class="icon" />
+     <i class="bi bi-link-45deg"></i>
     </button>
     <button title="Remove link" class="btn btn-outline-secondary" (click)="format('unlink')"
       [ngClass]="{ 'd-none': !isLinkSelected }"> <img src="../../assets/images/icon/unlink.png" class="icon" /></button>
@@ -45,15 +45,13 @@
         {{ size === 'Remove Size' ? 'Default Size' : size }}
       </option>
     </select>
-    <button class="btn btn-outline-secondary" (click)="undo()"><img src="../../assets/images/icon/undo.png"
-        class="icon" /></button>
-    <button class="btn btn-outline-secondary" (click)="redo()"><img src="../../assets/images/icon/redo.png"
-        class="icon" /></button>
+    <button class="btn btn-outline-secondary" (click)="undo()"><i class="bi bi-arrow-counterclockwise"></i></button>
+    <button class="btn btn-outline-secondary" (click)="redo()"><i class="bi bi-arrow-clockwise"></i></button>
     <button title="Upload PDF" class="btn btn-outline-secondary" (click)="insertPDF()">
-      <img src="../../assets/images/icon/pdf.png" class="icon" />
+      <i class="bi bi-file-earmark-pdf"></i>
     </button>
     <button title="View Source Code" class="btn btn-text" [ngClass]="isSourceView ? 'btn-dark' : 'btn-primary'"
-      (click)="toggleSourceCode()">{{ isSourceView ? 'Visual' : 'Source Code' }}</button>
+      (click)="toggleSourceCode()"><i class="bi bi-code text-light"></i></button>
 
 
 
@@ -67,8 +65,9 @@
 
 <!-- Styled Button -->
 <button type="button" (click)="triggerFileUpload()" class="btn btn-primary">
- Upload Word File
+<i class="bi bi-file-earmark-word text-light"></i>
 </button>
+  <button class="btn btn-danger rounded-0 px-4 py-2 mt-3" (click)="exportPDFWithPdfMake()">Export PDF</button>
 
 
   </div>
@@ -172,5 +171,8 @@
 
 
   </div>
-  <button class="btn btn-danger rounded-0 px-4 py-2 mt-3" (click)="exportPDFWithPdfMake()">Export PDF</button>
+ <div *ngIf="showWatermark" class="watermark-box">
+  Powered by <a href="http://simplycode.in" target="_blank">Kalpna Editor</a> - Free License
+</div>
+
 </div>
