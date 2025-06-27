@@ -1,18 +1,19 @@
-import { Component, ViewChild, ElementRef, AfterViewInit, Input  } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewInit, Input, ViewEncapsulation  } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { html as beautifyHtml } from 'js-beautify';
 import { robotoFont } from '../../assets/font/roboto-font';
 import { MuktaFont } from '../../assets/font/mukta-font-verified';
 import * as mammoth from 'mammoth';
 import htmlToPdfmake from 'html-to-pdfmake';
+import { html as beautifyHtml } from 'js-beautify';
 
 declare let window: any;
 
 @Component({
   selector: 'app-editor',
   standalone: false,
-  templateUrl: './editor.component.html',
-  styleUrl: './editor.component.css',
+  templateUrl: 'editor.component.html',
+  styleUrl: 'editor.component.css',
+    encapsulation: ViewEncapsulation.None
 })
 export class EditorComponent implements  AfterViewInit {
    @Input() licenseKey?: string;
@@ -47,34 +48,8 @@ export class EditorComponent implements  AfterViewInit {
   @ViewChild('textColorInput') textColorInput!: ElementRef<HTMLInputElement>;
   @ViewChild('bgColorInput') bgColorInput!: ElementRef<HTMLInputElement>;
 
+  constructor(private http: HttpClient) {}
 
-
-
-  constructor(private http: HttpClient) {
- this.uploadHook = {
-    image: async (file: File) => {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const res = await this.http
-        .post<{ url: string }>('http://localhost:3000/api/upload-img', formData)
-        .toPromise();
-
-      return `http://localhost:3000${res?.url}`;
-    },
-    pdf: async (file: File) => {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const res = await this.http
-        .post<{ url: string }>('http://localhost:3000/api/upload-pdf', formData)
-        .toPromise();
-
-      return `http://localhost:3000${res?.url}`;
-    }
-  };
-    
-  }
 
   handleEditorEvents(event: any) {
     this.saveSelection();
@@ -511,55 +486,46 @@ exportPDFWithPdfMake() {
     }
   }
 
-  insertImage() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
+ insertImage() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
 
-    input.onchange = () => {
-      const file = input.files?.[0];
-      if (file) {
-        const formData = new FormData();
-        formData.append('image', file);
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    if (!file) return;
 
-        this.http
-          .post<{ path: string }>(
-            'http://localhost:3000/upload/image',
-            formData
-          )
-          .subscribe((res) => {
-            const img = document.createElement('img');
-            img.src = `http://localhost:3000${res.path}`;
-            img.style.width = '100%';
-            img.style.height = 'auto';
-            img.style.display = 'block';
+    if (this.uploadHook?.image) {
+      try {
+        const imageUrl = await this.uploadHook.image(file);
 
-            // 🧊 Invisible resizable wrapper
-            const wrapper = document.createElement('p');
-            wrapper.contentEditable = 'false'; // prevent editing inside
-            wrapper.style.display = 'inline-block';
-            wrapper.style.resize = 'both';
-            wrapper.style.overflow = 'auto';
-            wrapper.style.maxWidth = '100%';
-            wrapper.style.border = '1px dashed transparent'; // invisible look
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.style.width = '100%';
+        img.style.height = 'auto';
+        img.style.display = 'block';
 
-            wrapper.appendChild(img);
+        const wrapper = document.createElement('p');
+        wrapper.contentEditable = 'false';
+        wrapper.style.display = 'inline-block';
+        wrapper.style.resize = 'both';
+        wrapper.style.overflow = 'auto';
+        wrapper.style.maxWidth = '100%';
+        wrapper.style.border = '1px dashed transparent';
 
-            // 🪄 Insert and auto-select
-            this.insertBlockAtCursor(wrapper);
-            setTimeout(() => {
-              const range = document.createRange();
-              range.selectNode(wrapper);
-              const selection = window.getSelection();
-              selection?.removeAllRanges();
-              selection?.addRange(range);
-            }, 0);
-          });
+        wrapper.appendChild(img);
+        this.insertBlockAtCursor(wrapper);
+      } catch (err) {
+        console.error('Image upload failed:', err);
+        alert('Image upload failed!');
       }
-    };
+    } else {
+      alert('No uploadHook.image() defined!');
+    }
+  };
 
-    input.click();
-  }
+  input.click();
+}
 
   applyTextDecoration(decoration: string) {
     const selection = window.getSelection();
@@ -774,41 +740,34 @@ toggleSourceCode() {
 }
 
 
-  insertPDF() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'application/pdf';
+ insertPDF() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/pdf';
 
-    input.onchange = () => {
-      const file = input.files?.[0];
-      if (file) {
-        const formData = new FormData();
-        formData.append('pdf', file);
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    if (!file) return;
 
-        this.http
-          .post<{ filePath: string }>(
-            'http://localhost:3000/upload/pdf',
-            formData
-          )
-          .subscribe((res) => {
-            const pdfUrl = `http://localhost:3000${res.filePath}`;
-            const fileName = file.name; // e.g., Resume.pdf
+    if (this.uploadHook?.pdf) {
+      try {
+        const pdfUrl = await this.uploadHook.pdf(file);
+        const fileName = file.name;
 
-            const linkHTML = `<a href="${pdfUrl}" target="_blank">${fileName}</a>`;
+        const linkHTML = `<a href="${pdfUrl}" target="_blank">${fileName}</a>`;
 
-            // ✨ Use execCommand to insert pure HTML (no wrappers)
-            this.restoreSelection();
-            document.execCommand('insertHTML', false, linkHTML);
-          });
+        this.restoreSelection();
+        document.execCommand('insertHTML', false, linkHTML);
+      } catch (err) {
+        console.error('PDF upload failed:', err);
+        alert('PDF upload failed!');
       }
-    };
+    } else {
+      alert('No uploadHook.pdf() defined!');
+    }
+  };
 
-    input.click();
-  }
-
-
-
-
-
+  input.click();
+}
 
 }
