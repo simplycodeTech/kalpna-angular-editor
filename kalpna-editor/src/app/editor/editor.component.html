@@ -1,74 +1,75 @@
 <div class="mx-auto">
 
   <div class="toolbar d-md-flex">
-    <div class="btn-group" role="group" aria-label="Basic example">
-      <button title="Upload Image" class="btn  btn-outline-secondary" (click)="insertImage()">
-        <i class="bi bi-image"></i>
+
+      <button title="Upload Image" class="editorbutton  " (click)="insertImage()">
+    <img src="../../assets/images/icon/Image.svg" class="svg" />
        </button>
-      <!--<button class="btn btn-outline-secondary" (click)="insertTable()"><i class="bi bi-table"></i></button>-->
-      <button title="Insert Table" class="btn btn-outline-secondary" (click)="toggleForm()"><i class="bi bi-table"></i></button>
-      <button title="Insert Paragraph" class="btn btn-outline-secondary" (click)="insertText('Sample Text')"><i class="bi bi-fonts"></i></button>
-    </div>
-    <div class="dropdown d-inline">
-      <button title="Insert Heading" class="btn btn-text btn-outline-secondary dropdown-toggle" type="button"
-        data-bs-toggle="dropdown">
-       <i class="bi bi-type-h1"></i>
+      <!--<button class="btn " (click)="insertTable()"><i class="bi bi-table"></i></button>-->
+      <button title="Insert Table" class="editorbutton " (click)="toggleForm()">
+          <img src="../../assets/images/icon/Table.svg" class="svg" />
       </button>
-      <ul class="dropdown-menu">
-        <li><a class="dropdown-item" (click)="insertHeading('h1')">H1</a></li>
-        <li><a class="dropdown-item" (click)="insertHeading('h2')">H2</a></li>
-        <li><a class="dropdown-item" (click)="insertHeading('h3')">H3</a></li>
-        <li><a class="dropdown-item" (click)="insertHeading('h4')">H4</a></li>
-        <li><a class="dropdown-item" (click)="insertHeading('h5')">H5</a></li>
-        <li><a class="dropdown-item" (click)="insertHeading('h6')">H6</a></li>
-      </ul>
-    </div>
+<select #formatSelect (change)="onFormatChange(formatSelect)">
+  <option value="">Select Text</option>
+  <option value="paragraph">Paragraph</option>
+  <option value="h1">Heading H1</option>
+  <option value="h2">Heading H2</option>
+  <option value="h3">Heading H3</option>
+  <option value="h4">Heading H4</option>
+  <option value="h5">Heading H5</option>
+  <option value="h6">Heading H6</option>
+</select>
 
-    <button title="Create Link" class="btn btn-outline-secondary" (click)="format('createLink')">
-     <i class="bi bi-link-45deg"></i>
+    <button title="Create Link" class="editorbutton " (click)="format('createLink')">
+   <img src="../../assets/images/icon/link.svg" class="svg" />
     </button>
-    <button title="Remove link" class="btn btn-outline-secondary" (click)="format('unlink')"
-      [ngClass]="{ 'd-none': !isLinkSelected }"> <img src="../../assets/images/icon/unlink.png" class="icon" /></button>
+    <button title="Remove link" class="editorbutton " (click)="format('unlink')"
+      [ngClass]="{ 'd-none': !isLinkSelected }">   <img src="../../assets/images/icon/link_off.svg" class="svg" /></button>
 
 
 
-    <button title="Insert Unordered List" class="btn btn-outline-secondary" (click)="insertUnorderedList()">
-      <i class="bi bi-list-ul"></i>
-    </button>
-
-    <button title="Insert Ordered List" class="btn btn-outline-secondary" (click)="insertOrderedList()">
-      <i class="bi bi-list-ol"></i>
+    <button title="Insert Unordered List" class="editorbutton " (click)="insertUnorderedList()">
+      <img src="../../assets/images/icon/list.svg" class="svg" />
     </button>
 
-    <select class="selection" [(ngModel)]="selectedFontSize" (change)="applyFontSize(selectedFontSize)">
-      <option *ngFor="let size of fontSizes" [value]="size">
-        {{ size === 'Remove Size' ? 'Default Size' : size }}
-      </option>
-    </select>
-    <button class="btn btn-outline-secondary" (click)="undo()"><i class="bi bi-arrow-counterclockwise"></i></button>
-    <button class="btn btn-outline-secondary" (click)="redo()"><i class="bi bi-arrow-clockwise"></i></button>
-    <button title="Upload PDF" class="btn btn-outline-secondary" (click)="insertPDF()">
-      <i class="bi bi-file-earmark-pdf"></i>
+    <button title="Insert Ordered List" class="editorbutton " (click)="insertOrderedList()">
+    <img src="../../assets/images/icon/list-ol.svg" class="svg" />
     </button>
-    <button title="View Source Code" class="btn btn-text" [ngClass]="isSourceView ? 'btn-dark' : 'btn-primary'"
-      (click)="toggleSourceCode()"><i class="bi bi-code text-light"></i></button>
+
+  
+    <button class="editorbutton " (click)="undo()">
+          <img src="../../assets/images/icon/undo.svg" class="svg" />
+    </button>
+    <button class="editorbutton " (click)="redo()">
+        <img src="../../assets/images/icon/redo.svg" class="svg" />
+    </button>
+
+    <button title="View Source Code" class="editorbutton btn-text" [ngClass]="isSourceView ? 'btn-dark' : 'btn-primary'"
+      (click)="toggleSourceCode()">
+    <img src="../../assets/images/icon/Code.svg" class="svg" /></button>
 
 
 
-      <input
+<button  class="editorbutton" (click)="clearFormatting()">Reset</button>
+
+
+    <button title="Upload PDF" class="editorbutton " (click)="insertPDF()">
+Insert PDF
+    </button>
+
+<!-- Styled Button -->
+<button type="button" (click)="triggerFileUpload()" class="editorbutton">
+Import Word
+ <input
   type="file"
   id="wordUpload"
   (change)="handleDocxUpload($event)"
   accept=".docx"
   hidden
 />
-
-<!-- Styled Button -->
-<button type="button" (click)="triggerFileUpload()" class="btn btn-primary">
-<i class="bi bi-file-earmark-word text-light"></i>
 </button>
-  <button class="btn btn-danger rounded-0 px-4 py-2 mt-3" (click)="exportPDFWithPdfMake()">Export PDF</button>
 
+  <button class="editorbutton" (click)="exportPDFWithPdfMake()">Export PDF</button>
 
   </div>
 
@@ -79,25 +80,20 @@
     <button class="btn btn-primary" (click)="insertTable()">Create Table</button>
   </div>
 
-  <div class="toolbar-popup" [ngClass]="isSourceView ? 'd-none' : 'toolbar-popup'" *ngIf="showToolbar"
-    [ngStyle]="{ top: position.top + 'px', left: position.left + 'px' }">
-    <button title="bold" class="btn-tooltip" (click)="format('bold')"><i class="bi bi-type-bold"></i></button>
+  <div class="toolbar-popup">
+    <button title="bold" class="editorbutton" (click)="format('bold')">
+      <img src="../../assets/images/icon/format_bold.svg" class="svg" />
+    </button>
 
 
-    <button title="italic" class="btn-tooltip" (click)="format('italic')"><i class="bi bi-type-italic"></i></button>
-    <button title="Create Link" class="btn-tooltip" (click)="format('createLink')"><img
-        src="../../assets/images/icon/link.png" class="icon" /></button>
-    <button title="Remove link" class="btn-tooltip" (click)="format('unlink')"
-      [ngClass]="{ 'd-none': !isLinkSelected }"><img src="../../assets/images/icon/unlink.png" class="icon" /></button>
-    <select class="selection" [(ngModel)]="selectedFontSize" (change)="applyFontSize(selectedFontSize)">
-      <option *ngFor="let size of fontSizes" [value]="size">
-        {{ size === 'Remove Size' ? 'Default Size' : size }}
-      </option>
-    </select>
-
+    <button title="italic" class="editorbutton" (click)="format('italic')">
+       <img src="../../assets/images/icon/format_italic.svg" class="svg" />
+    </button>
+    
+   
     <div class="lineHeights">
       <div class="dropdown-wrapper" (mouseleave)="showLineHeight = false">
-        <button title="Line Height" class="btn-tooltip" (click)="showLineHeight = !showLineHeight">
+        <button title="Line Height" class="editorbutton" (click)="showLineHeight = !showLineHeight">
           <img src="../../assets/images/icon/Lineheight.png" class="icon" />
         </button>
 
@@ -109,38 +105,45 @@
       </div>
     </div>
 
-    <button class="btn-tooltip" title="Left Align" (click)="format('justifyLeft')"><i
-        class="bi bi-text-left"></i></button>
-    <button class="btn-tooltip" title="Center Align" (click)="format('justifyCenter')"><i
-        class="bi bi-text-center"></i></button>
-    <button class="btn-tooltip" title="Right" (click)="format('justifyRight')"><i class="bi bi-text-right"></i></button>
+    <button class="editorbutton" title="Left Align" (click)="format('justifyLeft')">
+         <img src="../../assets/images/icon/Align-left.svg" class="svg" /></button>
+    <button class="editorbutton" title="Center Align" (click)="format('justifyCenter')">
+      <img src="../../assets/images/icon/Align-center.svg" class="svg" /></button>
+    <button class="editorbutton" title="Right" (click)="format('justifyRight')">
+      <img src="../../assets/images/icon/Align-right.svg" class="svg" /></button>
 
-    <button class="btn-tooltip" title="underline" (click)="applyTextDecoration('underline')">
-      <u>U</u>
+    <button class="editorbutton" title="underline" (click)="applyTextDecoration('underline')">
+     <img src="../../assets/images/icon/format_underlined.svg" class="svg" />
     </button>
-    <button class="btn-tooltip" title="line-through" (click)="applyTextDecoration('line-through')">
+    <button class="editorbutton" title="line-through" (click)="applyTextDecoration('line-through')">
       <s>S</s>
     </button>
-    <button class="btn-tooltip" title="overline" (click)="applyTextDecoration('overline')">
+    <button class="editorbutton" title="overline" (click)="applyTextDecoration('overline')">
       <span style="text-decoration: overline;">O</span>
     </button>
-    <button class="btn-tooltip" title="underline double" (click)="applyTextDecoration('underline double')">
+    <button class="editorbutton" title="underline double" (click)="applyTextDecoration('underline double')">
       <span style="text-decoration: underline double;">𝑈̲</span>
     </button>
 
     <div class="color-wrapper">
-      <button class="btn-tooltip" title="Text Color" (click)="openColorPicker('text')"><img
-          src="../../assets/images/icon/text-color.png" class="icon" /></button>
+      <button class="editorbutton" title="Text Color" (click)="openColorPicker('text')"><img
+          src="../../assets/images/icon/format_color_text.svg" class="icon" /></button>
       <input type="color" #textColorInput class="color-picker" (mousedown)="saveSelection()"
         (input)="applyColorLive('color', $event)" />
     </div>
 
     <div class="color-wrapper">
-      <button class="btn-tooltip" title="Backgound Color" (click)="openColorPicker('bg')"><img
-          src="../../assets/images/icon/color-picker.png" class="icon" /></button>
-      <input class="btn-tooltip" class="color-picker" #bgColorInput type="color" (mousedown)="saveSelection()"
+      <button class="editorbutton" title="Backgound Color" (click)="openColorPicker('bg')"><img
+          src="../../assets/images/icon/color_fill.svg" class="icon" /></button>
+      <input class="editorbutton" class="color-picker" #bgColorInput type="color" (mousedown)="saveSelection()"
         (input)="applyColorLive('backgroundColor', $event)" />
     </div>
+
+      <select class="selection" [(ngModel)]="selectedFontSize" (change)="applyFontSize(selectedFontSize)">
+      <option *ngFor="let size of fontSizes" [value]="size">
+        {{ size === 'Remove Size' ? 'Default Size' : size }}
+      </option>
+    </select>
 
 
   </div>
@@ -171,6 +174,8 @@
 
 
   </div>
+
+
  <div *ngIf="showWatermark" class="watermark-box">
   Powered by <a href="http://simplycode.in" target="_blank">Kalpna Editor</a> - Free License
 </div>

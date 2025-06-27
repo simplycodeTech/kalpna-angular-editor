@@ -33,6 +33,7 @@ export class EditorComponent implements  AfterViewInit {
   selectedFontSize: string = '`Default`';
   showLineHeight = false;
   isLinkSelected = false;
+  selectedFormat = 'paragraph';
   lineHeights: string[] = ['1', '1.5', '2', '2.5', '3'];
   fontSizes: string[] = [
     '8px', '10px', '12px', '14px', '16px', '18px',
@@ -42,12 +43,10 @@ export class EditorComponent implements  AfterViewInit {
   showForm = false;
   rows?: number;
   cols?: number;
-
-  @ViewChild('editor', { static: false }) editorRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('editor, editorRef', { static: false }) editorRef!: ElementRef<HTMLDivElement>;
   @ViewChild('sourceEditor', { static: false }) sourceEditorRef!: ElementRef<HTMLTextAreaElement>;
   @ViewChild('textColorInput') textColorInput!: ElementRef<HTMLInputElement>;
   @ViewChild('bgColorInput') bgColorInput!: ElementRef<HTMLInputElement>;
-
   constructor(private http: HttpClient) {}
 
 
@@ -363,11 +362,48 @@ exportPDFWithPdfMake() {
     }
   }
 
+
+
+
+clearFormatting() {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+
+  const start = range.startContainer.parentElement as HTMLElement;
+  const end = range.endContainer.parentElement as HTMLElement;
+
+  const allElements = new Set<HTMLElement>();
+  if (start) allElements.add(start);
+  if (end) allElements.add(end);
+
+  allElements.forEach((el) => {
+    if (el && el.style) {
+      console.log(`Removing style from`, el);
+      el.removeAttribute('style'); // ✅ only style removed
+    }
+  });
+}
+
+
+
+
+
+
+
+
+
   saveSelection() {
     const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      this.savedRange = selection.getRangeAt(0).cloneRange();
-    }
+  if (!selection || selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+
+  // ✅ ensure range is inside the editor only
+  if (this.editorRef.nativeElement.contains(range.commonAncestorContainer)) {
+    this.savedRange = range;
+  }
   }
 
   restoreSelection() {
@@ -380,33 +416,38 @@ exportPDFWithPdfMake() {
 
 
 
-  applyStyle(styleType: keyof CSSStyleDeclaration, value: string) {
-    if (!this.savedRange || this.savedRange.collapsed) return;
-    const selectionText = this.savedRange.toString().trim();
-    if (!selectionText) return;
+applyStyle(styleType: keyof CSSStyleDeclaration, value: string) {
+  if (!this.savedRange || this.savedRange.collapsed) return;
 
-    const selection = window.getSelection();
-    const range = this.savedRange;
-    const parent = range.startContainer.parentElement;
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
 
-    if (parent?.tagName === 'SPAN') {
-      (parent.style as any)[styleType] = value;
-      return;
-    }
+  const range = this.savedRange;
+  const commonAncestor = range.commonAncestorContainer;
+  const parentEl = commonAncestor instanceof HTMLElement
+    ? commonAncestor
+    : commonAncestor.parentElement;
 
-    const span = document.createElement('span');
-    (span.style as any)[styleType] = value;
-    span.textContent = selectionText;
-
-    range.deleteContents();
-    range.insertNode(span);
-
-    const newRange = document.createRange();
-    newRange.selectNodeContents(span);
-    selection?.removeAllRanges();
-    selection?.addRange(newRange);
-    this.savedRange = newRange;
+  if (parentEl && parentEl !== this.editorRef.nativeElement) {
+    // ✅ Apply style directly to existing parent
+    (parentEl.style as any)[styleType] = value;
+    this.savedRange = range;
+    return;
   }
+
+  const span = document.createElement('span');
+  (span.style as any)[styleType] = value;
+  span.textContent = range.toString();
+
+  range.deleteContents();
+  range.insertNode(span);
+
+  const newRange = document.createRange();
+  newRange.selectNodeContents(span);
+  selection.removeAllRanges();
+  selection.addRange(newRange);
+  this.savedRange = newRange;
+}
 
   applyFontSize(size: string) {
     this.applyStyle('fontSize', size === 'Default' ? '' : size);
@@ -418,11 +459,14 @@ exportPDFWithPdfMake() {
     this.applyStyle('lineHeight', value);
   }
 
-  applyColorLive(styleType: 'color' | 'backgroundColor', event: Event) {
-    const input = event.target as HTMLInputElement;
-    const value = input.value;
-    this.applyStyle(styleType, value);
-  }
+
+
+applyColorLive(styleType: 'color' | 'backgroundColor', event: Event) {
+  const input = event.target as HTMLInputElement;
+  const selectedValue = input.value;
+  this.applyStyle(styleType, selectedValue);
+}
+
 
   openColorPicker(type: 'text' | 'bg') {
     if (type === 'text') {
@@ -527,49 +571,67 @@ exportPDFWithPdfMake() {
   input.click();
 }
 
-  applyTextDecoration(decoration: string) {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
+applyTextDecoration(decoration: string) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
 
-    const range = selection.getRangeAt(0);
-    const selectedText = selection.toString().trim();
-    if (!selectedText) return;
+  const range = selection.getRangeAt(0);
+  const selectedText = selection.toString().trim();
+  if (!selectedText) return;
 
-    const parent = range.startContainer.parentElement;
-    const alreadyApplied = parent && parent.style.textDecoration === decoration;
+  const parent = range.startContainer.parentElement as HTMLElement;
 
-    if (alreadyApplied) {
-      parent.style.textDecoration = '';
-      return;
+  if (parent && parent.style) {
+    let current = parent.style.textDecoration || "";
+    let decorations = current.split(" ").map((d: string) => d.trim()).filter(Boolean);
+
+    const index = decorations.indexOf(decoration);
+    if (index > -1) {
+      decorations.splice(index, 1); // remove
+    } else {
+      decorations.push(decoration); // add
     }
 
-    const span = document.createElement('span');
-    span.textContent = selectedText;
-    span.style.textDecoration = decoration;
-
-    range.deleteContents();
-    range.insertNode(span);
-
-    const newRange = document.createRange();
-    newRange.selectNodeContents(span);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
+    parent.style.textDecoration = decorations.join(" ");
   }
+}
+
+
 
   toggleForm() {
     this.showForm = !this.showForm;
   }
 
+
+
+onFormatChange(selectEl: HTMLSelectElement) {
+  const value = selectEl.value;
+
+  switch (value) {
+    case 'paragraph':
+      this.insertText('Sample Text');
+      break;
+    case 'h1':
+    case 'h2':
+    case 'h3':
+    case 'h4':
+    case 'h5':
+    case 'h6':
+      this.insertHeading(value);
+      break;
+  }
+
+  // Reset select so that same option can be reselected
+  selectEl.value = '';
+}
+
+
 insertText(text: string) {
-  if (!this.savedRange) return;
-  this.restoreSelection();
-
-  const textNode = document.createTextNode(text);
-
   const selection = window.getSelection();
   const range = selection?.getRangeAt(0);
   if (!range) return;
 
+  const textNode = document.createTextNode(text);
   range.deleteContents();
   range.insertNode(textNode);
 
